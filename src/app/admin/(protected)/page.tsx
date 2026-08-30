@@ -1,30 +1,38 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db/client";
-import { TSE_CONFIG } from "@/lib/tse-client/config";
+import { TSE_CONFIG } from "@/integrations/tse/config";
+import { getTseElectionDataProvider } from "@/integrations/tse";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Painel administrativo" };
 
 export default async function AdminDashboard() {
+  const tse = getTseElectionDataProvider();
   const [
     totalCandidates,
     mockCandidates,
     withoutPhoto,
     lastSync,
+    lastImportFile,
     openCorrections,
     proposalsCount,
     lowConfidenceExcerpts,
     byOffice,
+    round1Config,
+    round2Config,
   ] = await Promise.all([
     prisma.candidate.count(),
     prisma.candidate.count({ where: { isMockData: true } }),
     prisma.candidate.count({ where: { photoUrl: null } }),
     prisma.dataSyncLog.findFirst({ orderBy: { startedAt: "desc" } }),
+    prisma.tseImportFile.findFirst({ orderBy: { downloadedAt: "desc" } }),
     prisma.correctionReport.count({ where: { status: "OPEN" } }),
     prisma.governmentProposal.count(),
     prisma.governmentProposalExcerpt.count({ where: { extractionConfidence: { lt: 0.7 } } }),
     prisma.candidate.groupBy({ by: ["officeId"], _count: true }),
+    tse.results.getElectionConfiguration(1).catch(() => null),
+    tse.results.getElectionConfiguration(2).catch(() => null),
   ]);
 
   return (
@@ -77,20 +85,64 @@ export default async function AdminDashboard() {
       <section>
         <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-taupe-ink">Apuração</h2>
         <Card>
-          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
               <dt className="text-taupe-ink">Modo</dt>
               <dd className="mt-0.5 font-mono">{TSE_CONFIG.resultsMode}</dd>
             </div>
             <div>
-              <dt className="text-taupe-ink">URL de resultados confirmada?</dt>
+              <dt className="text-taupe-ink">1º turno — cd_eleicao</dt>
               <dd className="mt-0.5">
-                <Badge variant={TSE_CONFIG.resultsDownloadBaseUrl ? "accent" : "mock"}>
-                  {TSE_CONFIG.resultsDownloadBaseUrl ? "Sim" : "Pendente (ver blueprint §19)"}
-                </Badge>
+                <Badge variant={round1Config?.cdEleicao ? "accent" : "mock"}>{round1Config?.cdEleicao ?? "não publicado ainda"}</Badge>
               </dd>
             </div>
+            <div>
+              <dt className="text-taupe-ink">2º turno — cd_eleicao</dt>
+              <dd className="mt-0.5">
+                <Badge variant={round2Config?.cdEleicao ? "accent" : "mock"}>{round2Config?.cdEleicao ?? "não publicado ainda"}</Badge>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-taupe-ink">Config verificada em</dt>
+              <dd className="mt-0.5 font-mono text-xs">{round1Config?.discoveredAt.toLocaleTimeString("pt-BR") ?? "—"}</dd>
+            </div>
           </dl>
+          <p className="mt-3 text-xs text-taupe-ink">
+            Descoberto ao vivo em <code>{TSE_CONFIG.resultsBaseUrl}/comum/config/ele-c.json</code> — nunca hardcoded. Ver docs/tse-integration.md §3.
+          </p>
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-taupe-ink">Última importação de candidatos (TSE)</h2>
+        <Card>
+          {lastImportFile ? (
+            <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-taupe-ink">Dataset</dt>
+                <dd className="mt-0.5 font-medium">{lastImportFile.dataset}</dd>
+              </div>
+              <div>
+                <dt className="text-taupe-ink">Status</dt>
+                <dd className="mt-0.5">
+                  <Badge variant={lastImportFile.status === "PROCESSED" ? "accent" : "mock"}>{lastImportFile.status}</Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-taupe-ink">Checksum</dt>
+                <dd className="mt-0.5 truncate font-mono text-xs">{lastImportFile.checksum.slice(0, 16)}…</dd>
+              </div>
+              <div>
+                <dt className="text-taupe-ink">Baixado em</dt>
+                <dd className="mt-0.5">{lastImportFile.downloadedAt.toLocaleString("pt-BR")}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="text-sm text-text-muted">
+              Nenhuma sincronização real do TSE rodou ainda neste banco (o banco está com dados de exemplo via seed).
+              Rode <code>npm run tse:sync-candidates</code> de uma rede sem o bloqueio descrito em docs/tse-integration.md.
+            </p>
+          )}
         </Card>
       </section>
 

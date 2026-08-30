@@ -16,7 +16,7 @@ export default function Home() {
           Eleições Gerais 2026
         </span>
         <h1 className="mt-5 text-balance font-display text-4xl font-semibold leading-tight sm:text-5xl">
-          {live ? "Acompanhe os resultados oficiais." : "As eleições 2026, sem complicação."}
+          {live ? "Acompanhe os resultados oficiais." : "Eleições sem complicação."}
         </h1>
         <p className="mx-auto mt-4 max-w-lg text-balance text-lg text-text-muted">
           {live

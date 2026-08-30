@@ -19,6 +19,17 @@ export default function PrivacidadePage() {
         <li>Você pode apagar tudo a qualquer momento, abaixo. A exclusão é imediata porque não existe cópia no servidor.</li>
       </ul>
 
+      <h2>Localização automática</h2>
+      <p>
+        Na primeira visita, o site pode pedir permissão ao seu navegador para detectar automaticamente o seu estado
+        (usando o prompt nativo do próprio navegador — nunca uma tela nossa fingindo ser esse pedido). Se você
+        permitir, suas coordenadas são enviadas diretamente do seu navegador para a BigDataCloud, um serviço de
+        geocodificação reversa, que devolve apenas o estado correspondente. Essa chamada nunca passa pelo nosso
+        servidor, e nós só guardamos o resultado (a sigla do estado) no seu aparelho. Se você recusar ou fechar o
+        pedido, nada acontece — o site continua funcionando normalmente e você escolhe seu estado manualmente onde
+        for preciso. Você pode trocar o estado detectado a qualquer momento.
+      </p>
+
       <h2>Apagar meus dados agora</h2>
       <p>Isso remove seu estado salvo, respostas do quiz e sua cola eleitoral deste navegador.</p>
       <ClearDataButton />

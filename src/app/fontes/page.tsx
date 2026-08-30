@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/layout/legal-page";
-import { TSE_CONFIG } from "@/lib/tse-client/config";
+import { TSE_CONFIG } from "@/integrations/tse/config";
 
 export const metadata: Metadata = { title: "Fontes" };
 
@@ -27,7 +27,7 @@ export default function FontesPage() {
           informações técnicas do TSE
         </a>{" "}
         e o{" "}
-        <a href={TSE_CONFIG.resultsPortalUrl} target="_blank" rel="noopener">
+        <a href={`${TSE_CONFIG.resultsBaseUrl}/`} target="_blank" rel="noopener">
           portal de resultados oficiais
         </a>
         .

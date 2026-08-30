@@ -89,9 +89,32 @@ model Coalition {
 // Candidato — camada RAW
 // ---------------------------------------------------------------------------
 
-/// Payload exatamente como recebido do TSE. Nunca editado manualmente (blueprint §06).
+/// Um arquivo baixado do TSE (o ZIP/CSV/JSON inteiro, não uma linha).
+/// Nunca descartamos o arquivo original — permite reprocessar do zero se um
+/// mapper tiver bug, sem precisar baixar de novo (briefing "DADOS BRUTOS").
+model TseImportFile {
+  id             String   @id @default(cuid())
+  dataset        String   // ex. "consulta_cand", "bem_candidato"
+  resourceName   String
+  resourceUrl    String
+  electionYear   Int
+  fileName       String
+  mimeType       String
+  checksum       String
+  downloadedAt   DateTime @default(now())
+  tseLastModified DateTime?
+  status         String   // DOWNLOADED, VALIDATED, PROCESSED, REJECTED
+  rawRecords     TseCandidateRaw[]
+
+  @@index([dataset, electionYear])
+}
+
+/// Payload exatamente como recebido do TSE, uma linha por candidato. Nunca
+/// editado manualmente (blueprint §06).
 model TseCandidateRaw {
   id             String    @id @default(cuid())
+  importFile     TseImportFile? @relation(fields: [importFileId], references: [id])
+  importFileId   String?
   tseCandidateId String
   electionYear   Int
   payloadJson    Json

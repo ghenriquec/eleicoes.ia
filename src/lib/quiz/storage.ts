@@ -8,6 +8,8 @@
 
 const KEYS = {
   uf: "votocerto:uf",
+  ufSource: "votocerto:uf-source",
+  geoAsked: "votocerto:geo-asked",
   topics: "votocerto:quiz:topics",
   answers: "votocerto:quiz:answers",
   ballot: "votocerto:ballot",
@@ -36,8 +38,31 @@ function safeSet(key: string, value: unknown) {
 export function getSavedUF(): string | null {
   return safeGet<string | null>(KEYS.uf, null);
 }
-export function saveUF(uf: string) {
+
+export type UFSource = "manual" | "geolocation";
+
+/** `source` fica salvo só para transparência (ex.: mostrar "detectamos automaticamente"). */
+export function saveUF(uf: string, source: UFSource = "manual") {
   safeSet(KEYS.uf, uf);
+  safeSet(KEYS.ufSource, source);
+}
+
+export function getUFSource(): UFSource | null {
+  return safeGet<UFSource | null>(KEYS.ufSource, null);
+}
+
+export function clearUF() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(KEYS.uf);
+  window.localStorage.removeItem(KEYS.ufSource);
+}
+
+/** Nunca perguntamos automaticamente mais de uma vez por dispositivo. */
+export function wasGeoAsked(): boolean {
+  return safeGet<boolean>(KEYS.geoAsked, false);
+}
+export function markGeoAsked() {
+  safeSet(KEYS.geoAsked, true);
 }
 
 export function getSavedTopics(): string[] {
@@ -73,6 +98,7 @@ export function clearBallot() {
 export function clearAllLocalData() {
   clearQuizData();
   clearBallot();
+  clearUF();
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(KEYS.uf);
+  window.localStorage.removeItem(KEYS.geoAsked);
 }

@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppFooter } from "@/components/layout/app-footer";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LocationDetector } from "@/components/layout/location-detector";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <AppFooter />
         <BottomNav />
+        <LocationDetector />
       </body>
     </html>
   );
