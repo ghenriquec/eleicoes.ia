@@ -20,9 +20,13 @@ export default async function EstadoPage({ params }: PageProps<"/estados/[uf]">)
   const state = getState(uf);
   if (!state) notFound();
 
-  const officesToShow = OFFICES.filter((o) =>
-    state.uf === "DF" ? o.slug !== "deputado-estadual" : o.slug !== "deputado-distrital",
-  );
+  // Presidente é cargo nacional — não tem página própria por estado, vai
+  // direto para a listagem geral já filtrada. Os demais 5 cargos têm uma
+  // rota dedicada em /estados/[uf]/[cargo].
+  const officesToShow = OFFICES.filter((o) => {
+    if (o.slug === "presidente") return false;
+    return state.uf === "DF" ? o.slug !== "deputado-estadual" : o.slug !== "deputado-distrital";
+  });
 
   const counts = await Promise.all(
     officesToShow.map(async (o) => ({
@@ -30,6 +34,7 @@ export default async function EstadoPage({ params }: PageProps<"/estados/[uf]">)
       count: await countCandidates({ uf: state.uf, officeSlug: o.slug }),
     })),
   );
+  const presidentCount = await countCandidates({ officeSlug: "presidente" });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -49,6 +54,14 @@ export default async function EstadoPage({ params }: PageProps<"/estados/[uf]">)
             </Card>
           </Link>
         ))}
+        <Link href="/candidatos?cargo=presidente">
+          <Card className="h-full transition-colors hover:border-accent">
+            <p className="font-display text-lg font-semibold">Presidente</p>
+            <p className="mt-1 text-sm text-text-muted">
+              {presidentCount} candidato{presidentCount !== 1 ? "s" : ""} · corrida nacional
+            </p>
+          </Card>
+        </Link>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">

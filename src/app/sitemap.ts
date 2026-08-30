@@ -31,7 +31,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/estados/${s.uf.toLowerCase()}/governador`, lastModified: new Date() },
     { url: `${BASE}/estados/${s.uf.toLowerCase()}/senador`, lastModified: new Date() },
     { url: `${BASE}/estados/${s.uf.toLowerCase()}/deputado-federal`, lastModified: new Date() },
-    { url: `${BASE}/estados/${s.uf.toLowerCase()}/deputado-estadual`, lastModified: new Date() },
+    {
+      // DF elege Deputado Distrital, não Estadual (briefing §3).
+      url: `${BASE}/estados/${s.uf.toLowerCase()}/${s.uf === "DF" ? "deputado-distrital" : "deputado-estadual"}`,
+      lastModified: new Date(),
+    },
   ]);
 
   const candidateRoutes = await prisma.candidate
