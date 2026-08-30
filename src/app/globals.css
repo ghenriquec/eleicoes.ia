@@ -1,26 +1,158 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Design tokens — votocerto.ia (blueprint §14).
+ * Paleta fornecida: Onyx / Jungle Teal / Celadon / Alabaster / Taupe.
+ * Nunca vermelho, azul partidário ou verde-amarelo institucional.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --bg: #eae6e5;
+  --surface: #ffffff;
+  --surface-2: #f2eeec;
+  --text: #12130f;
+  --text-muted: #5a5148;
+  --border: #d9d2ce;
+  --border-strong: #c7bdb7;
+
+  --accent: #5b9279;
+  --accent-ink: #2f5a47;
+  --accent-tint: #e4f0e9;
+  --accent2: #8fcb9b;
+  --accent2-tint: #eaf6ee;
+
+  --taupe: #8f8073;
+  --taupe-ink: #5a5148;
+  --taupe-tint: #f1ece7;
+
+  --danger: #a5432f;
+  --danger-tint: #f7e8e4;
+
+  --focus-ring: #2f5a47;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #121310;
+    --surface: #191a15;
+    --surface-2: #1e1f19;
+    --text: #eae6e5;
+    --text-muted: #b3a89b;
+    --border: #332f28;
+    --border-strong: #453f36;
+
+    --accent: #8fcb9b;
+    --accent-ink: #a9dab3;
+    --accent-tint: rgba(143, 203, 155, 0.12);
+    --accent2: #5b9279;
+    --accent2-tint: rgba(91, 146, 121, 0.2);
+
+    --taupe: #a89a8b;
+    --taupe-ink: #b3a89b;
+    --taupe-tint: rgba(143, 128, 115, 0.16);
+
+    --danger: #e08469;
+    --danger-tint: rgba(165, 67, 47, 0.18);
+
+    --focus-ring: #8fcb9b;
   }
 }
 
+:root[data-theme="dark"] {
+  --bg: #121310;
+  --surface: #191a15;
+  --surface-2: #1e1f19;
+  --text: #eae6e5;
+  --text-muted: #b3a89b;
+  --border: #332f28;
+  --border-strong: #453f36;
+
+  --accent: #8fcb9b;
+  --accent-ink: #a9dab3;
+  --accent-tint: rgba(143, 203, 155, 0.12);
+  --accent2: #5b9279;
+  --accent2-tint: rgba(91, 146, 121, 0.2);
+
+  --taupe: #a89a8b;
+  --taupe-ink: #b3a89b;
+  --taupe-tint: rgba(143, 128, 115, 0.16);
+
+  --danger: #e08469;
+  --danger-tint: rgba(165, 67, 47, 0.18);
+
+  --focus-ring: #8fcb9b;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent2: var(--accent2);
+  --color-accent2-tint: var(--accent2-tint);
+  --color-taupe: var(--taupe);
+  --color-taupe-ink: var(--taupe-ink);
+  --color-taupe-tint: var(--taupe-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-public-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent2-tint);
+  color: var(--accent-ink);
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.font-mono-nums {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

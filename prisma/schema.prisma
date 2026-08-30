@@ -1,0 +1,387 @@
+// votocerto.ia — schema núcleo (Fase 1).
+// Camada RAW (TseCandidateRaw / TseResultRaw) sempre precede a camada normalizada —
+// nenhuma linha normalizada é escrita sem uma linha RAW correspondente (blueprint §06).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Eleição
+// ---------------------------------------------------------------------------
+
+model Election {
+  id        String          @id @default(cuid())
+  year      Int             @unique
+  rounds    ElectionRound[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model ElectionRound {
+  id         String    @id @default(cuid())
+  election   Election  @relation(fields: [electionId], references: [id])
+  electionId String
+  /// 1 ou 2
+  round      Int
+  votingDate DateTime
+
+  candidates Candidate[]
+  snapshots  ElectionResultSnapshot[]
+
+  @@unique([electionId, round])
+}
+
+// ---------------------------------------------------------------------------
+// Geografia e cargos
+// ---------------------------------------------------------------------------
+
+model State {
+  id         String      @id @default(cuid())
+  /// sigla de 2 letras, ex. "MG"
+  uf         String      @unique
+  name       String
+  candidates Candidate[]
+}
+
+model Office {
+  id         String      @id @default(cuid())
+  /// slug estável, ex. "deputado-federal"
+  slug       String      @unique
+  name       String
+  candidates Candidate[]
+}
+
+// ---------------------------------------------------------------------------
+// Partidos, federações, coligações
+// ---------------------------------------------------------------------------
+
+model Party {
+  id           String       @id @default(cuid())
+  /// número oficial do partido no TSE
+  tseNumber    Int          @unique
+  acronym      String
+  name         String
+  federation   Federation?  @relation(fields: [federationId], references: [id])
+  federationId String?
+  candidates   Candidate[]
+}
+
+model Federation {
+  id      String  @id @default(cuid())
+  tseId   String  @unique
+  name    String
+  parties Party[]
+}
+
+model Coalition {
+  id         String      @id @default(cuid())
+  tseId      String      @unique
+  name       String
+  candidates Candidate[]
+}
+
+// ---------------------------------------------------------------------------
+// Candidato — camada RAW
+// ---------------------------------------------------------------------------
+
+/// Payload exatamente como recebido do TSE. Nunca editado manualmente (blueprint §06).
+model TseCandidateRaw {
+  id             String    @id @default(cuid())
+  tseCandidateId String
+  electionYear   Int
+  payloadJson    Json
+  sourceUrl      String
+  checksum       String
+  importedAt     DateTime  @default(now())
+  candidate      Candidate?
+
+  @@index([tseCandidateId, electionYear])
+}
+
+// ---------------------------------------------------------------------------
+// Candidato — camada normalizada
+// ---------------------------------------------------------------------------
+
+model Candidate {
+  id              String   @id @default(cuid())
+  /// identificador oficial estável do TSE — nunca nome+número (blueprint §11)
+  tseCandidateId  String   @unique
+
+  round           ElectionRound @relation(fields: [roundId], references: [id])
+  roundId         String
+  state           State    @relation(fields: [stateId], references: [id])
+  stateId         String
+  office          Office   @relation(fields: [officeId], references: [id])
+  officeId        String
+  party           Party    @relation(fields: [partyId], references: [id])
+  partyId         String
+  federationId    String?
+  coalition       Coalition? @relation(fields: [coalitionId], references: [id])
+  coalitionId     String?
+
+  ballotName      String
+  fullName        String
+  ballotNumber    String
+  slug            String   @unique
+  photoUrl        String?
+  status          String   // ex. DEFERIDA, INDEFERIDA, CASSADA, SUB_JUDICE — valor oficial do TSE, nunca inferido
+  statusDescription String?
+  isIncumbent     Boolean?
+  /// true apenas em ambiente de desenvolvimento/demo — nunca em produção (briefing §83).
+  isMockData      Boolean  @default(false)
+
+  occupation      String?
+  educationLevel  String?
+  birthYear       Int?
+  placeOfBirth    String?
+  nationality     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  sourceUpdatedAt DateTime?
+
+  rawData         TseCandidateRaw? @relation(fields: [rawDataId], references: [id])
+  rawDataId       String?          @unique
+
+  assets          CandidateAsset[]
+  socialNetworks  CandidateSocialNetwork[]
+  documents       CandidateDocument[]
+  sources         CandidateSource[]
+  proposal        GovernmentProposal?
+  topicPositions  CandidateTopicPosition[]
+  results         CandidateResult[]
+
+  @@index([stateId, officeId])
+  @@index([partyId])
+}
+
+model CandidateAsset {
+  id          String    @id @default(cuid())
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidateId String
+  assetType   String
+  description String
+  /// valor em centavos para evitar erro de ponto flutuante
+  valueCents  BigInt
+  declaredAt  DateTime?
+}
+
+model CandidateSocialNetwork {
+  id          String    @id @default(cuid())
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidateId String
+  platform    String
+  url         String
+}
+
+model CandidateDocument {
+  id           String    @id @default(cuid())
+  candidate    Candidate @relation(fields: [candidateId], references: [id])
+  candidateId  String
+  documentType String
+  issuedAt     DateTime?
+  sourceUrl    String
+}
+
+/// Proveniência — toda informação relevante sabe de onde veio (blueprint §67).
+model CandidateSource {
+  id             String    @id @default(cuid())
+  candidate      Candidate @relation(fields: [candidateId], references: [id])
+  candidateId    String
+  sourceType     String
+  sourceName     String
+  sourceUrl      String
+  sourceDocument String?
+  sourcePage     Int?
+  publishedAt    DateTime?
+  retrievedAt    DateTime  @default(now())
+  checksum       String?
+}
+
+// ---------------------------------------------------------------------------
+// Plano de governo
+// ---------------------------------------------------------------------------
+
+model GovernmentProposal {
+  id           String    @id @default(cuid())
+  candidate    Candidate @relation(fields: [candidateId], references: [id])
+  candidateId  String    @unique
+  documentName String
+  sourceUrl    String
+  obtainedAt   DateTime  @default(now())
+  excerpts     GovernmentProposalExcerpt[]
+}
+
+model GovernmentProposalExcerpt {
+  id                  String   @id @default(cuid())
+  proposal            GovernmentProposal @relation(fields: [proposalId], references: [id])
+  proposalId          String
+  topic                Topic   @relation(fields: [topicId], references: [id])
+  topicId              String
+  originalText         String
+  summary              String
+  sourcePage           Int?
+  sourceDocument       String
+  sourceUrl            String
+  /// 0..1 — confiança do extrator de IA; nunca exibido como fato, sempre com "ver trecho original"
+  extractionConfidence Float
+  reviewedAt           DateTime?
+  reviewedBy           String?
+}
+
+// ---------------------------------------------------------------------------
+// Quiz
+// ---------------------------------------------------------------------------
+
+model Topic {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  questions QuizQuestion[]
+  excerpts  GovernmentProposalExcerpt[]
+}
+
+model QuizQuestion {
+  id             String   @id @default(cuid())
+  topic          Topic    @relation(fields: [topicId], references: [id])
+  topicId        String
+  text           String
+  explanation    String?
+  sourceContext  String?
+  weight         Int      @default(1)
+  order          Int      @default(0)
+  options        QuizAnswerOption[]
+  positions      CandidateTopicPosition[]
+}
+
+model QuizAnswerOption {
+  id                 String   @id @default(cuid())
+  question           QuizQuestion @relation(fields: [questionId], references: [id])
+  questionId         String
+  text               String
+  /// -2..2, null = "não sei / prefiro não responder"
+  normalizedPosition Int?
+  order              Int      @default(0)
+}
+
+/// Posição pública e documentada de um candidato sobre uma QuizQuestion.
+/// Nunca preenchido por suposição — sem CandidateSource, a comparação é UNKNOWN (briefing §22).
+model CandidateTopicPosition {
+  id           String       @id @default(cuid())
+  candidate    Candidate    @relation(fields: [candidateId], references: [id])
+  candidateId  String
+  question     QuizQuestion @relation(fields: [questionId], references: [id])
+  questionId   String
+  /// -2..2, na mesma escala normalizada das QuizAnswerOption
+  position     Int
+  confidence   Float
+  sourceId     String?
+  sourceExcerpt String?
+  sourcePage   Int?
+  reviewedAt   DateTime?
+
+  @@unique([candidateId, questionId])
+}
+
+// ---------------------------------------------------------------------------
+// Apuração
+// ---------------------------------------------------------------------------
+
+model CandidateResult {
+  id            String        @id @default(cuid())
+  candidate     Candidate     @relation(fields: [candidateId], references: [id])
+  candidateId   String
+  votes         BigInt
+  percentage    Float
+  /// valor oficial do TSE — ELEITO, ELEITO POR QP, ELEITO POR MÉDIA, SUPLENTE, NÃO ELEITO, 2º TURNO
+  situation     String
+  receivedAt    DateTime
+  tseGeneratedAt DateTime?
+
+  @@unique([candidateId])
+}
+
+model ElectionResultSnapshot {
+  id             String        @id @default(cuid())
+  round          ElectionRound @relation(fields: [roundId], references: [id])
+  roundId        String
+  /// "BR" para nacional, sigla de UF, ou UF:cargo
+  scope          String
+  office         String?
+  receivedAt     DateTime      @default(now())
+  tseGeneratedAt DateTime?
+  processedAt    DateTime?
+  payloadHash    String
+  payload        Json
+
+  @@index([roundId, scope])
+}
+
+model ElectionProgress {
+  id             String   @id @default(cuid())
+  scope          String   @unique // "BR" ou sigla de UF
+  round          Int
+  sectionsTotal  Int
+  sectionsCounted Int
+  percentage     Float
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Sincronização, correções, administração
+// ---------------------------------------------------------------------------
+
+model DataSyncLog {
+  id              String   @id @default(cuid())
+  source          String
+  sourceUrl       String
+  startedAt       DateTime @default(now())
+  finishedAt      DateTime?
+  status          String   // RUNNING, SUCCESS, NO_CHANGES, FAILED
+  recordsReceived Int      @default(0)
+  recordsCreated  Int      @default(0)
+  recordsUpdated  Int      @default(0)
+  recordsRejected Int      @default(0)
+  checksum        String?
+  errors          Json?
+}
+
+model CorrectionReport {
+  id              String    @id @default(cuid())
+  candidateId     String?
+  field           String
+  description     String
+  suggestedSource String?
+  reporterEmail   String?
+  status          String    @default("OPEN") // OPEN, IN_REVIEW, APPLIED, REJECTED
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolutionNote  String?
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   // VIEWER, EDITOR, SUPER_ADMIN
+  createdAt DateTime @default(now())
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  admin      AdminUser @relation(fields: [adminId], references: [id])
+  adminId    String
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime  @default(now())
+}

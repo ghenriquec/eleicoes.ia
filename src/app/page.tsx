@@ -1,69 +1,117 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ShieldCheck, Sparkles, Lock, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { STATES } from "@/lib/domain/states";
+import { ELECTION_CONFIG, deriveElectionStatus, isLiveResultsPhase } from "@/lib/domain/election-config";
 
 export default function Home() {
+  const status = deriveElectionStatus(new Date(), ELECTION_CONFIG);
+  const live = isLiveResultsPhase(status);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <section className="mx-auto max-w-2xl text-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-accent-tint px-3 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-accent-ink">
+          Eleições Gerais 2026
+        </span>
+        <h1 className="mt-5 text-balance font-display text-4xl font-semibold leading-tight sm:text-5xl">
+          {live ? "Acompanhe os resultados oficiais." : "As eleições 2026, sem complicação."}
+        </h1>
+        <p className="mx-auto mt-4 max-w-lg text-balance text-lg text-text-muted">
+          {live
+            ? "Resultados oficiais do TSE em tempo real, por estado e por cargo."
+            : "Conheça candidatos, consulte dados oficiais, compare propostas e monte sua cola eleitoral."}
+        </p>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          {live ? (
+            <>
+              <Button href="/apuracao" size="lg">
+                Acompanhar apuração <ArrowRight size={16} />
+              </Button>
+              <Button href="/minha-cola" size="lg" variant="secondary">
+                Abrir minha cola
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button href="/minha-cola" size="lg">
+                Montar minha cola <ArrowRight size={16} />
+              </Button>
+              <Button href="/candidatos" size="lg" variant="secondary">
+                Conhecer candidatos
+              </Button>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <TrustCard icon={ShieldCheck} title="Dados oficiais do TSE" text="Candidaturas e resultados vêm direto da Justiça Eleitoral — nunca inventados." />
+        <TrustCard icon={Sparkles} title="Apartidário" text="Nenhum candidato paga para aparecer primeiro ou recebe recomendação de voto." />
+        <TrustCard icon={Lock} title="Privacidade por padrão" text="Suas respostas do quiz e sua cola ficam só no seu aparelho." />
+      </section>
+
+      <section className="mt-16">
+        <div className="mb-5 flex items-baseline justify-between">
+          <h2 className="font-display text-xl font-semibold">Escolha seu estado</h2>
+          <Link href="/candidatos" className="text-sm font-medium text-accent-ink hover:underline">
+            Ver todos os candidatos
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 md:grid-cols-9">
+          {STATES.map((s) => (
+            <Link
+              key={s.uf}
+              href={`/estados/${s.uf.toLowerCase()}`}
+              className="rounded-xl border border-border bg-surface px-3 py-3 text-center transition-colors hover:border-accent hover:bg-accent-tint"
+            >
+              <div className="font-mono text-sm font-semibold">{s.uf}</div>
+              <div className="mt-0.5 truncate text-[11px] text-text-muted">{s.name}</div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StepCard
+          step="01"
+          title="Faça o quiz"
+          text="Responda perguntas sobre suas prioridades e posições em temas concretos — sem pegadinha partidária."
+          href="/quiz"
+          cta="Começar o quiz"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <StepCard
+          step="02"
+          title="Monte sua cola"
+          text="Escolha seus candidatos para os 6 cargos e leve uma cola grande e legível para a votação."
+          href="/minha-cola"
+          cta="Montar cola"
+        />
+      </section>
     </div>
+  );
+}
+
+function TrustCard({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
+  return (
+    <Card>
+      <Icon size={20} className="text-accent-ink" />
+      <p className="mt-3 font-semibold">{title}</p>
+      <p className="mt-1 text-sm text-text-muted">{text}</p>
+    </Card>
+  );
+}
+
+function StepCard({ step, title, text, href, cta }: { step: string; title: string; text: string; href: string; cta: string }) {
+  return (
+    <Card className="flex flex-col">
+      <span className="font-mono text-xs text-taupe-ink">{step}</span>
+      <h3 className="mt-2 font-display text-lg font-semibold">{title}</h3>
+      <p className="mt-1 flex-1 text-sm text-text-muted">{text}</p>
+      <Button href={href} variant="secondary" className="mt-4 self-start">
+        {cta}
+      </Button>
+    </Card>
   );
 }
