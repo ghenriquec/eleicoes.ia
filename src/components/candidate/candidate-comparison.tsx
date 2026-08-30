@@ -8,13 +8,16 @@ import { getSavedUF, getSavedAnswers } from "@/lib/quiz/storage";
 import { compareAnswer, COMPARISON_LABEL, type ComparisonResult } from "@/lib/quiz/compare";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MockDataBadge } from "@/components/ui/mock-data-badge";
 
+/** Formato plano da API interna — /api/elections/2026/candidates */
 interface ListCandidate {
   id: string;
   ballotName: string;
   ballotNumber: string;
-  party: { acronym: string };
+  partyAbbreviation: string;
   status: string;
+  isMockData: boolean;
 }
 
 interface DetailCandidate {
@@ -70,9 +73,11 @@ export function CandidateComparison() {
     setSelectedIds([]);
     setDetails(null);
     if (!uf || !office) return;
-    fetch(`/api/candidates?uf=${uf}&office=${office}`)
+    // Presidente é cargo nacional — candidatos ficam sob a UF "BR", nunca a UF escolhida.
+    const stateParam = office === "presidente" ? "" : `&state=${uf}`;
+    fetch(`/api/elections/2026/candidates?office=${office}${stateParam}`)
       .then((r) => r.json())
-      .then((d) => setList(d.candidates));
+      .then((body) => setList(body.data));
   }, [uf, office]);
 
   function toggle(id: string) {
@@ -84,6 +89,9 @@ export function CandidateComparison() {
   }
 
   async function runComparison() {
+    // Endpoint próprio (não /api/elections/2026) porque a comparação precisa
+    // de topicPositions do quiz — não é dado oficial do TSE, é um recurso do
+    // nosso produto construído em cima dele.
     const res = await fetch(`/api/candidates/detail?ids=${selectedIds.join(",")}`);
     const data = await res.json();
     setDetails(data.candidates);
@@ -125,6 +133,7 @@ export function CandidateComparison() {
                   }`}
                 >
                   <span className="font-mono font-bold">{c.ballotNumber}</span> {c.ballotName}
+                  {c.isMockData && <MockDataBadge />}
                 </button>
               );
             })}

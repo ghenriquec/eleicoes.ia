@@ -57,6 +57,7 @@ export interface CandidateFilters {
 
 export interface Candidate {
   id: string;
+  slug: string;
   tseCandidateId: string;
   electionYear: number;
   state: string;
@@ -78,6 +79,8 @@ export interface Candidate {
   photoUrl: string | null;
   sourceUpdatedAt: Date | null;
   declaredAssetsTotalCents: bigint;
+  /** true apenas em ambiente de desenvolvimento/demo — nunca em produção (briefing §83). */
+  isMockData: boolean;
 }
 
 export interface CandidatePhoto {

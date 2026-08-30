@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getState } from "@/lib/domain/states";
 import { OFFICES } from "@/lib/domain/offices";
-import { ELECTION_CONFIG, deriveElectionStatus } from "@/lib/domain/election-config";
-import { ResultsUnavailable } from "@/components/results/results-unavailable";
+import { LiveResults } from "@/components/results/live-results";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/apuracao/[uf]">): Promise<Metadata> {
   const { uf } = await params;
@@ -16,7 +17,6 @@ export default async function ApuracaoUfPage({ params }: PageProps<"/apuracao/[u
   const { uf } = await params;
   const state = getState(uf);
   if (!state) notFound();
-  const status = deriveElectionStatus(new Date(), ELECTION_CONFIG);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -37,7 +37,7 @@ export default async function ApuracaoUfPage({ params }: PageProps<"/apuracao/[u
         })}
       </nav>
       <div className="mt-8">
-        <ResultsUnavailable status={status} scope={`de ${state.name}`} />
+        <LiveResults round={1} scope={state.uf} label={state.name} />
       </div>
     </div>
   );

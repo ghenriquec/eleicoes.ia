@@ -7,7 +7,10 @@ import { ballotSlotsForUF, validateBallotSelection, ballotProgress, type Ballot,
 import { getSavedBallot, setBallotSlot, removeBallotSlot } from "@/lib/quiz/ballot-storage";
 import { getSavedUF, saveUF, clearBallot } from "@/lib/quiz/storage";
 import { Button } from "@/components/ui/button";
+import { MockDataBadge } from "@/components/ui/mock-data-badge";
+import { OFFICE_ENUM_TO_SLUG, type ElectionOffice } from "@/integrations/tse/constants/offices";
 
+/** Formato plano da API interna (briefing "API INTERNA") — /api/elections/2026/candidates */
 interface ApiCandidate {
   id: string;
   slug: string;
@@ -16,9 +19,9 @@ interface ApiCandidate {
   photoUrl: string | null;
   status: string;
   isMockData: boolean;
-  state: { uf: string; name: string };
-  office: { slug: string; name: string };
-  party: { acronym: string; name: string };
+  state: string;
+  office: string;
+  partyAbbreviation: string;
 }
 
 export function BallotBuilder() {
@@ -43,10 +46,10 @@ export function BallotBuilder() {
       candidateId: candidate.id,
       ballotNumber: candidate.ballotNumber,
       ballotName: candidate.ballotName,
-      office: candidate.office.slug as BallotCandidateRef["office"],
-      uf: candidate.state.uf,
+      office: OFFICE_ENUM_TO_SLUG[candidate.office as ElectionOffice] as BallotCandidateRef["office"],
+      uf: candidate.state,
       photoUrl: candidate.photoUrl,
-      partyAcronym: candidate.party.acronym,
+      partyAcronym: candidate.partyAbbreviation,
       statusAtSelection: candidate.status,
     };
     const error = validateBallotSelection(ballot, slotKey, ref, uf);
@@ -216,16 +219,18 @@ function CandidatePicker({
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    fetch(`/api/candidates?uf=${uf}&office=${office}`)
+    // Presidente é cargo nacional — candidatos ficam sob a UF "BR", nunca a UF do eleitor.
+    const stateParam = office === "presidente" ? "" : `&state=${uf}`;
+    fetch(`/api/elections/2026/candidates?office=${office}${stateParam}`)
       .then((r) => r.json())
-      .then((data) => setCandidates(data.candidates));
+      .then((body) => setCandidates(body.data));
   }, [uf, office]);
 
   const filtered = candidates?.filter(
     (c) =>
       c.ballotName.toLowerCase().includes(query.toLowerCase()) ||
       c.ballotNumber.includes(query) ||
-      c.party.acronym.toLowerCase().includes(query.toLowerCase()),
+      c.partyAbbreviation.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
@@ -257,7 +262,8 @@ function CandidatePicker({
                 >
                   <span className="font-mono text-sm font-bold tabular-nums text-accent-ink">{c.ballotNumber}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.ballotName}</span>
-                  <span className="flex-none text-xs text-text-muted">{c.party.acronym}</span>
+                  {c.isMockData && <MockDataBadge className="flex-none" />}
+                  <span className="flex-none text-xs text-text-muted">{c.partyAbbreviation}</span>
                 </button>
               ))}
             </div>

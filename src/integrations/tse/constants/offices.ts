@@ -45,3 +45,22 @@ export const RESULT_OFFICE_CODE_MAP: Partial<Record<ElectionOffice, string>> = {
 export function mapCandidateOfficeCode(dsCargo: string): ElectionOffice | null {
   return CANDIDATE_OFFICE_CODE_MAP[dsCargo.trim().toUpperCase()] ?? null;
 }
+
+/**
+ * ElectionOffice -> slug em português usado nas rotas do site
+ * (`/cargos/[cargo]`, `/estados/[uf]/[cargo]`) e no modelo `Office` do
+ * Prisma. Único lugar onde essa tradução deve existir — nunca duplicar em
+ * componentes de frontend.
+ */
+export const OFFICE_ENUM_TO_SLUG: Record<ElectionOffice, string> = {
+  [ElectionOffice.PRESIDENT]: "presidente",
+  [ElectionOffice.GOVERNOR]: "governador",
+  [ElectionOffice.SENATOR]: "senador",
+  [ElectionOffice.FEDERAL_DEPUTY]: "deputado-federal",
+  [ElectionOffice.STATE_DEPUTY]: "deputado-estadual",
+  [ElectionOffice.DISTRICT_DEPUTY]: "deputado-distrital",
+};
+
+export const OFFICE_SLUG_TO_ENUM: Record<string, ElectionOffice> = Object.fromEntries(
+  Object.entries(OFFICE_ENUM_TO_SLUG).map(([enumValue, slug]) => [slug, enumValue as ElectionOffice]),
+);

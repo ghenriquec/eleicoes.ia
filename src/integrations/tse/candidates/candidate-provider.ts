@@ -1,18 +1,8 @@
 import { prisma } from "@/lib/db/client";
 import { syncCandidates } from "./candidate-sync";
 import type { Candidate, CandidateFilters, SyncResult, TseCandidateProvider } from "../types";
-import { ElectionOffice } from "../constants/offices";
+import { ElectionOffice, OFFICE_SLUG_TO_ENUM, OFFICE_ENUM_TO_SLUG } from "../constants/offices";
 import type { Prisma } from "@prisma/client";
-
-const OFFICE_SLUG_TO_ENUM: Record<string, ElectionOffice> = {
-  presidente: ElectionOffice.PRESIDENT,
-  governador: ElectionOffice.GOVERNOR,
-  senador: ElectionOffice.SENATOR,
-  "deputado-federal": ElectionOffice.FEDERAL_DEPUTY,
-  "deputado-estadual": ElectionOffice.STATE_DEPUTY,
-  "deputado-distrital": ElectionOffice.DISTRICT_DEPUTY,
-};
-const OFFICE_ENUM_TO_SLUG = Object.fromEntries(Object.entries(OFFICE_SLUG_TO_ENUM).map(([k, v]) => [v, k]));
 
 type CandidateWithRelations = Prisma.CandidateGetPayload<{
   include: { state: true; office: true; party: true; round: { include: { election: true } }; assets: true };
@@ -22,6 +12,7 @@ function toDomainCandidate(row: CandidateWithRelations): Candidate {
   const totalCents = row.assets.reduce((sum, a) => sum + a.valueCents, BigInt(0));
   return {
     id: row.id,
+    slug: row.slug,
     tseCandidateId: row.tseCandidateId,
     electionYear: row.round.election.year,
     state: row.state.uf,
@@ -29,7 +20,7 @@ function toDomainCandidate(row: CandidateWithRelations): Candidate {
     ballotName: row.ballotName,
     fullName: row.fullName,
     ballotNumber: row.ballotNumber,
-    partyNumber: 0,
+    partyNumber: row.party.tseNumber,
     partyAbbreviation: row.party.acronym,
     partyName: row.party.name,
     federation: null,
@@ -43,6 +34,7 @@ function toDomainCandidate(row: CandidateWithRelations): Candidate {
     photoUrl: row.photoUrl,
     sourceUpdatedAt: row.sourceUpdatedAt,
     declaredAssetsTotalCents: totalCents,
+    isMockData: row.isMockData,
   };
 }
 

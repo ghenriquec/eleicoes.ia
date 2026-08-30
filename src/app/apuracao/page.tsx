@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ELECTION_CONFIG, deriveElectionStatus, isLiveResultsPhase } from "@/lib/domain/election-config";
-import { ResultsUnavailable } from "@/components/results/results-unavailable";
+import { LiveResults } from "@/components/results/live-results";
 import { Button } from "@/components/ui/button";
 import { STATES } from "@/lib/domain/states";
 
 export const metadata: Metadata = { title: "Apuração" };
+export const dynamic = "force-dynamic";
 
-export default function ApuracaoPage() {
+export default async function ApuracaoPage() {
   const status = deriveElectionStatus(new Date(), ELECTION_CONFIG);
   const live = isLiveResultsPhase(status) && status !== "ELECTION_DAY";
 
@@ -26,7 +27,7 @@ export default function ApuracaoPage() {
       </div>
 
       <div className="mt-8">
-        <ResultsUnavailable status={status} scope="do Brasil" />
+        <LiveResults round={1} scope="BR" label="Brasil" />
       </div>
 
       {live && (
