@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MockDataBadge } from "@/components/ui/mock-data-badge";
 import { getCandidateBySlug } from "@/lib/data/candidates";
+import { getState } from "@/lib/domain/states";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,13 @@ export async function generateMetadata({ params }: PageProps<"/candidato/[slug]"
 
 const centsToBRL = (cents: bigint) =>
   (Number(cents) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** DEFERIDA/análise ainda não concluída não são a mesma coisa que uma rejeição — nunca usar o tom de "perigo" para o normal. */
+function statusBadgeVariant(status: string): "accent" | "danger" | "neutral" {
+  if (status === "DEFERIDA" || status === "DEFERIDA COM RECURSO") return "accent";
+  if (status === "INDEFERIDA" || status === "CASSADA" || status === "SUB JUDICE") return "danger";
+  return "neutral"; // ex.: "AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL"
+}
 
 export default async function CandidatePage({ params }: PageProps<"/candidato/[slug]">) {
   const { slug } = await params;
@@ -60,7 +68,7 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
             {candidate.coalition ? ` · Coligação ${candidate.coalition.name}` : ""}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge variant={candidate.status === "DEFERIDA" ? "accent" : "danger"}>
+            <Badge variant={statusBadgeVariant(candidate.status)}>
               Candidatura: {candidate.status}
             </Badge>
             <Badge variant="source">✓ Dados oficiais do TSE</Badge>
@@ -77,7 +85,7 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
           <Field label="Ocupação declarada" value={candidate.occupation} />
           <Field label="Grau de instrução" value={candidate.educationLevel} />
           <Field label="Ano de nascimento" value={candidate.birthYear ? String(candidate.birthYear) : null} />
-          <Field label="Naturalidade" value={candidate.placeOfBirth} />
+          <Field label="Estado de nascimento" value={candidate.placeOfBirth ? (getState(candidate.placeOfBirth)?.name ?? candidate.placeOfBirth) : null} />
           <Field label="Nacionalidade" value={candidate.nationality} />
         </dl>
       </Card>

@@ -61,7 +61,11 @@ export function createTseCandidateProvider(): TseCandidateProvider {
         ];
       }
 
-      const rows = await prisma.candidate.findMany({ where, include: INCLUDE, orderBy: { ballotName: "asc" }, take: 200 });
+      // 2.000 cobre com folga o maior recorte real observado (SP/deputado
+      // estadual, 1.426 candidatos em 2026) — sem filtro nenhum, a base
+      // inteira (~20 mil) ainda é maior que isso; ver `countCandidates` em
+      // src/lib/data/candidates.ts para a contagem real, independente deste limite.
+      const rows = await prisma.candidate.findMany({ where, include: INCLUDE, orderBy: { ballotName: "asc" }, take: 2000 });
       return rows.map(toDomainCandidate);
     },
 

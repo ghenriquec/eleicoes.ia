@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/client";
-import { downloadCandidatesZip } from "./fetch-candidates-zip";
+import { downloadCandidatesZip, loadCandidatesZipFromFile, type DownloadedCandidatesFile } from "./fetch-candidates-zip";
+import { TSE_CONFIG } from "../config";
 import { TseCandidateRowSchema } from "../schemas/candidate.schema";
 import { mapCandidateRow } from "../mappers/candidate-mapper";
 import type { SyncResult } from "../types";
@@ -7,14 +8,14 @@ import type { SyncError } from "../errors";
 import { getCacheProvider } from "../cache";
 import { tseLog } from "../logger";
 
-function slugify(name: string, number: string): string {
+function slugify(name: string, number: string, uf: string): string {
   return (
     name
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") + `-${number}`
+      .replace(/(^-|-$)/g, "") + `-${number}-${uf.toLowerCase()}`
   );
 }
 
@@ -24,16 +25,18 @@ function slugify(name: string, number: string): string {
  * upsert → SyncResult → invalida cache. Idempotente: arquivo idêntico não é
  * reprocessado.
  */
-export async function syncCandidates(electionYear: number): Promise<SyncResult> {
+export async function syncCandidates(electionYear: number, localFilePath?: string): Promise<SyncResult> {
   const startedAt = new Date();
   const errors: SyncError[] = [];
   let recordsCreated = 0;
   let recordsUpdated = 0;
   let recordsRejected = 0;
 
-  let downloaded;
+  let downloaded: DownloadedCandidatesFile;
   try {
-    downloaded = await downloadCandidatesZip(electionYear);
+    downloaded = localFilePath
+      ? await loadCandidatesZipFromFile(localFilePath, `${TSE_CONFIG.candidatesCdnBaseUrl}/consulta_cand_${electionYear}.zip`)
+      : await downloadCandidatesZip(electionYear);
   } catch (err) {
     return {
       status: "FAILED",
@@ -128,13 +131,19 @@ export async function syncCandidates(electionYear: number): Promise<SyncResult> 
       if (!party) {
         party = await prisma.party.upsert({
           where: { tseNumber: mapped.partyNumber },
-          update: { acronym: mapped.partyAbbreviation },
-          create: { tseNumber: mapped.partyNumber, acronym: mapped.partyAbbreviation, name: mapped.partyAbbreviation },
+          update: { acronym: mapped.partyAbbreviation, name: mapped.partyName ?? mapped.partyAbbreviation },
+          create: {
+            tseNumber: mapped.partyNumber,
+            acronym: mapped.partyAbbreviation,
+            name: mapped.partyName ?? mapped.partyAbbreviation,
+          },
         });
         partyCache.set(mapped.partyNumber, party);
       }
 
       if (!round1) throw new Error(`ElectionRound não seedado para o ano ${electionYear}`);
+
+      const birthYear = mapped.birthDate ? Number(mapped.birthDate.split("/").pop()) || null : null;
 
       const existing = await prisma.candidate.findUnique({ where: { tseCandidateId: mapped.tseCandidateId } });
       await prisma.candidate.upsert({
@@ -145,6 +154,9 @@ export async function syncCandidates(electionYear: number): Promise<SyncResult> 
           status: mapped.status,
           occupation: mapped.occupation,
           educationLevel: mapped.education,
+          birthYear,
+          placeOfBirth: mapped.birthplace,
+          nationality: mapped.nationality,
           rawDataId: raw.id,
           sourceUpdatedAt: new Date(),
         },
@@ -157,10 +169,12 @@ export async function syncCandidates(electionYear: number): Promise<SyncResult> 
           ballotName: mapped.ballotName,
           fullName: mapped.fullName,
           ballotNumber: mapped.ballotNumber,
-          slug: slugify(mapped.ballotName, mapped.ballotNumber),
+          slug: slugify(mapped.ballotName, mapped.ballotNumber, mapped.uf),
           status: mapped.status,
           occupation: mapped.occupation,
           educationLevel: mapped.education,
+          birthYear,
+          placeOfBirth: mapped.birthplace,
           nationality: mapped.nationality,
           isMockData: false,
           rawDataId: raw.id,

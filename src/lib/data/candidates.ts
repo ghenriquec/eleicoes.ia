@@ -115,9 +115,27 @@ export async function listCandidates(filters: CandidateFilters, take = 60, skip 
   return all.slice(skip, skip + take);
 }
 
+/**
+ * Contagem real via `count()` do Prisma — nunca depende do limite de 2.000
+ * do provider (o maior recorte real de 2026, SP/Deputado Estadual, já tem
+ * 1.426 candidatos sozinho; sem filtro nenhum a base inteira passa de
+ * 19 mil). Mantém a mesma lógica de filtro do provider oficial.
+ */
 export async function countCandidates(filters: CandidateFilters): Promise<number> {
-  const all = await fetchAndAdaptCandidates(filters);
-  return all.length;
+  const where: import("@prisma/client").Prisma.CandidateWhereInput = {};
+  if (filters.uf) where.state = { uf: filters.uf.toUpperCase() };
+  if (filters.officeSlug) where.office = { slug: filters.officeSlug };
+  if (filters.partyAcronym) where.party = { acronym: filters.partyAcronym };
+  if (filters.query) {
+    const q = filters.query.trim();
+    where.OR = [
+      { ballotName: { contains: q, mode: "insensitive" } },
+      { fullName: { contains: q, mode: "insensitive" } },
+      { ballotNumber: { startsWith: q } },
+      { party: { acronym: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+  return prisma.candidate.count({ where });
 }
 
 export async function getCandidateBySlug(slug: string) {

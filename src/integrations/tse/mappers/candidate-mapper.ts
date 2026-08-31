@@ -2,10 +2,23 @@ import type { TseCandidateRow, TseAssetRow } from "../schemas/candidate.schema";
 import type { RawCandidateRecord } from "../types";
 import { mapCandidateOfficeCode } from "../constants/offices";
 
-/** campo original TSE -> campo interno (docs/tse-integration.md §4) */
+/**
+ * O TSE usa os literais "#NULO" e "#NE" (e variações de caixa) como
+ * marcadores de "sem valor"/"não especificado" — nunca devem virar texto
+ * visível na interface. Ver docs/tse-integration.md §4.
+ */
+export function tseNullable(value: string | undefined | null): string | null {
+  const v = (value ?? "").trim();
+  if (!v || v.toUpperCase() === "#NULO" || v.toUpperCase() === "#NE" || v === "-1" || v === "-3") return null;
+  return v;
+}
+
+/** campo original TSE -> campo interno (docs/tse-integration.md §4, confirmado contra arquivo real de 2026) */
 export function mapCandidateRow(row: TseCandidateRow, sourceUrl: string): RawCandidateRecord | null {
   const office = mapCandidateOfficeCode(row.DS_CARGO);
-  if (!office) return null; // cargo fora do nosso domínio (ex. prefeito/vereador) — ignorado, não é erro
+  if (!office) return null; // cargo fora do nosso domínio (suplente, vice, prefeito, vereador etc.) — ignorado, não é erro
+
+  const status = tseNullable(row.DS_SITUACAO_CANDIDATURA);
 
   return {
     tseCandidateId: row.SQ_CANDIDATO,
@@ -17,16 +30,18 @@ export function mapCandidateRow(row: TseCandidateRow, sourceUrl: string): RawCan
     ballotNumber: row.NR_CANDIDATO,
     partyAbbreviation: row.SG_PARTIDO,
     partyNumber: Number(row.NR_PARTIDO),
-    partyName: null, // não presente nesta linha — resolvido por join com o recurso de partidos, quando existir
-    federation: null,
-    coalition: row.NM_COLIGACAO || null,
-    status: row.DS_SITUACAO_CANDIDATURA || "",
+    partyName: tseNullable(row.NM_PARTIDO),
+    federation: tseNullable(row.NM_FEDERACAO),
+    coalition: tseNullable(row.NM_COLIGACAO),
+    // "#NE" = Justiça Eleitoral ainda não concluiu a análise da candidatura —
+    // nunca mostrar como "deferida"/"indeferida" quando o TSE não decidiu.
+    status: status ?? "AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL",
     statusDescription: null,
-    occupation: row.DS_OCUPACAO || null,
-    education: row.DS_GRAU_INSTRUCAO || null,
-    birthDate: row.DT_NASCIMENTO || null,
-    birthplace: row.NM_MUNICIPIO_NASCIMENTO || null,
-    nationality: row.DS_NACIONALIDADE || null,
+    occupation: tseNullable(row.DS_OCUPACAO),
+    education: tseNullable(row.DS_GRAU_INSTRUCAO),
+    birthDate: tseNullable(row.DT_NASCIMENTO),
+    birthplace: tseNullable(row.SG_UF_NASCIMENTO),
+    nationality: null, // não presente no dataset de candidatos — nunca inferido
     photoUrl: null,
     sourceUrl,
     raw: row as unknown as Record<string, string>,

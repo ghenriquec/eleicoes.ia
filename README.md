@@ -27,12 +27,15 @@ memória) · Zod · Vitest.
 npm install
 npx prisma dev -n votocerto -d   # sobe um Postgres local efêmero (sem Docker)
 npx prisma db push
-npm run db:seed                  # popula dados de EXEMPLO — nunca reais
+npm run db:seed                  # popula perguntas do quiz (+ dados de EXEMPLO, se quiser rodar sem candidatos reais)
 npm run dev
 ```
 
 Copie `.env.example` para `.env` e ajuste `DATABASE_URL` para a conexão que o
 `prisma dev` imprimir.
+
+Para popular com **candidatos reais de 2026** em vez de dados de exemplo, ver
+"Como popular com dados reais" abaixo.
 
 ## Integração com o TSE
 
@@ -60,21 +63,45 @@ do TSE por trás.
   respostas reais do TSE (eleição de 2022), incluindo conferência dos
   números com o resultado histórico público (Lula 50,90% no 2º turno) — ver
   `src/integrations/tse/results/results.contract.test.ts`.
+- O schema e o pipeline de candidatos (`syncCandidates()`) foram validados
+  com os **19.879 candidatos reais das Eleições Gerais 2026** — ver abaixo.
 
-**O que está implementado mas não pôde ser validado nesta sessão:** o
-download do CSV de candidatos (`cdn.tse.jus.br`) — o TSE bloqueia (HTTP 403)
-requisições automatizadas vindas deste ambiente de desenvolvimento, mas não
-bloqueia `resultados.tse.jus.br`. Rode `npm run tse:sync-candidates` de uma
-rede sem esse bloqueio para validar. Detalhes completos em
+**Bloqueio de rede deste ambiente:** `cdn.tse.jus.br` (onde o ZIP de
+candidatos vive) bloqueia todo acesso automatizado daqui — não bloqueia
+`resultados.tse.jus.br`. Rode `npm run tse:sync-candidates` de uma rede sem
+esse bloqueio para sincronizar direto do CDN oficial. Detalhes completos em
 [`docs/tse-integration.md`](docs/tse-integration.md).
+
+## Como popular com dados reais
+
+O banco deste projeto já está populado com os **19.879 candidatos reais**
+das Eleições Gerais 2026 (todos os cargos, todas as 27 UFs), obtidos do CDN
+oficial do TSE. Como o CDN está bloqueado neste ambiente de desenvolvimento,
+a importação usou uma captura arquivada do próprio arquivo oficial
+(Wayback Machine, snapshot de 27/08/2026) como ponte — o pipeline de parsing/
+validação/upsert é exatamente o mesmo que roda em produção:
+
+```bash
+npx tsx scripts/tse/import-real-candidates.ts /caminho/para/consulta_cand_2026.zip
+```
+
+Isso limpa qualquer dado de exemplo residual e importa o ZIP indicado. Em
+produção (ou de uma rede sem o bloqueio), use `npm run tse:sync-candidates`
+em vez disso — ele baixa direto do CDN.
+
+**Nota honesta sobre o dado:** em 30/08/2026, o TSE ainda não tinha concluído
+a análise de nenhuma candidatura — todos os 19.879 registros têm situação
+`"AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL"` (nunca inventamos "DEFERIDA"). Só
+o dataset de Candidatos foi validado; Bens, Redes sociais, Fotos e Proposta
+de governo ainda não foram importados (ver `docs/tse-integration.md` §5).
 
 ## O que é real e o que é exemplo
 
-Todo candidato, partido e proposta desta base de desenvolvimento é **dado de
-exemplo** (`isMockData: true`), gerado por `src/lib/tse-client/mock-data.ts`
-e populado pelo seed. Nada representa uma pessoa real — ver briefing §83. A
+Só existe dado de exemplo (`isMockData: true`, gerado por
+`src/lib/tse-client/mock-data.ts`) se você rodar `npm run db:seed` sem também
+importar os candidatos reais — útil para testar a UI sem depender de rede. A
 interface mostra um selo "DADOS DE EXEMPLO" sempre que esse conteúdo está em
-tela.
+tela; nada nele representa uma pessoa real (briefing §83).
 
 ## Localização automática
 
@@ -93,9 +120,10 @@ npm run build                # build de produção
 npm run test                 # testes (Vitest) — inclui contract tests contra fixtures reais do TSE
 npm run lint                 # ESLint
 npm run db:seed              # repopula o banco com dados de exemplo
-npm run tse:sync-candidates  # roda o worker de sincronização de candidatos
+npm run tse:sync-candidates  # roda o worker de sincronização de candidatos (direto do CDN)
 npm run tse:sync-results     # roda a descoberta de ciclo eleitoral (ao vivo)
 npm run tse:capture-fixture  # baixa e salva uma resposta real do TSE como fixture
+npx tsx scripts/tse/import-real-candidates.ts <zip>  # importa candidatos reais de um ZIP local
 ```
 
 ## Admin
