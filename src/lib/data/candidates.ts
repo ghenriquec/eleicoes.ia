@@ -11,7 +11,7 @@ import type { Candidate as TseCandidate } from "@/integrations/tse";
  * uma preocupação de produto, não do dado oficial em si.
  *
  * `getCandidateBySlug` é a exceção: a página de perfil precisa de relações
- * (bens, redes sociais, plano de governo, fontes, posições do quiz) que não
+ * (bens, redes sociais, plano de governo, fontes) que não
  * fazem parte do contrato oficial do TSE — por isso segue consultando o
  * banco diretamente.
  */
@@ -76,6 +76,33 @@ async function fetchAndAdaptCandidates(filters: CandidateFilters): Promise<Candi
 
   let cards = results.map((c) => toCard(c, stateNames.get(c.state) ?? c.state, OFFICE_SLUG_TO_NAME[OFFICE_ENUM_TO_SLUG[c.office]] ?? c.office));
 
+  // O provider ordena por ballotName e corta em 2.000 registros — numa busca
+  // sem filtro de cargo isso quase sempre exclui os 13 presidenciáveis reais
+  // (nomes como "LULA"/"ZEMA" ficam bem depois das dezenas de milhares de
+  // candidatos a deputado que vêm antes alfabeticamente). Sem cargo definido,
+  // busca Presidente à parte — são só 13 registros, não estoura limite nenhum
+  // — e garante que apareçam primeiro sempre, com estado/partido/busca ou
+  // sem. Presidente não é de nenhum estado (UF "BR"), então um filtro de
+  // estado continua excluindo-os corretamente — isso não muda.
+  if (!filters.officeSlug && !filters.uf) {
+    const already = new Set(cards.map((c) => c.id));
+    const presidentResults = await tse.candidates.find({
+      electionYear: 2026,
+      office: OFFICE_SLUG_TO_ENUM.presidente,
+      party: filters.partyAcronym,
+    });
+    let presidentCards = presidentResults
+      .map((c) => toCard(c, stateNames.get(c.state) ?? c.state, OFFICE_SLUG_TO_NAME.presidente))
+      .filter((c) => !already.has(c.id));
+    if (filters.query) {
+      const q = filters.query.trim().toLowerCase();
+      presidentCards = presidentCards.filter(
+        (c) => c.ballotName.toLowerCase().includes(q) || c.ballotNumber.includes(q) || c.party.acronym.toLowerCase().includes(q),
+      );
+    }
+    cards = [...presidentCards, ...cards];
+  }
+
   // Busca livre também casa com sigla do partido — o provider oficial só
   // busca em nome/número (dado TSE puro); isso é refinamento de produto.
   if (filters.query) {
@@ -94,7 +121,15 @@ async function fetchAndAdaptCandidates(filters: CandidateFilters): Promise<Candi
     cards = [...cards, ...extra];
   }
 
+  // Sem filtro de cargo, presidenciáveis aparecem primeiro (pedido do produto) —
+  // com um cargo específico já escolhido isso não muda nada, pois só aquele cargo aparece.
+  const officeRank = (c: CandidateCardData) => (c.office.slug === "presidente" ? 0 : 1);
+
   cards.sort((a, b) => {
+    if (!filters.officeSlug) {
+      const rankDiff = officeRank(a) - officeRank(b);
+      if (rankDiff !== 0) return rankDiff;
+    }
     switch (filters.sort) {
       case "za":
         return b.ballotName.localeCompare(a.ballotName);

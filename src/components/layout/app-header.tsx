@@ -3,7 +3,8 @@ import { ElectionStatusBanner } from "./election-status-banner";
 
 const NAV = [
   { href: "/candidatos", label: "Candidatos" },
-  { href: "/quiz", label: "Quiz" },
+  { href: "/noticias", label: "Notícias" },
+  { href: "/pesquisas", label: "Pesquisas" },
   { href: "/comparar", label: "Comparar" },
   { href: "/minha-cola", label: "Minha cola" },
   { href: "/apuracao", label: "Apuração" },

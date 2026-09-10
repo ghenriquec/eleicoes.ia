@@ -6,27 +6,22 @@ export const metadata: Metadata = { title: "Metodologia" };
 export default function MetodologiaPage() {
   return (
     <LegalPage title="Metodologia">
-      <h2>Como o quiz funciona</h2>
-      <p>
-        Cada pergunta oferece de 3 a 5 posições concretas e distintas sobre um tema, mais a opção &ldquo;não sei /
-        prefiro não responder&rdquo;. Cada opção tem um valor de -2 a +2 numa escala normalizada. Nunca usamos
-        perguntas do tipo &ldquo;você é de esquerda ou direita&rdquo; nem citamos partidos nas perguntas.
-      </p>
-
       <h2>Como posições de candidatos são classificadas</h2>
       <p>
-        Uma posição documentada de candidato (<code>CandidateTopicPosition</code>) só existe quando há uma fonte
-        pública verificável — normalmente um trecho do plano de governo registrado no TSE. Ela nunca é criada por
-        suposição, inferência de partido ou de discurso de campanha não registrado oficialmente.
+        Uma proposta exibida no comparador só existe quando há uma fonte pública verificável — o plano de governo
+        registrado no TSE, com página de origem. Ela nunca é criada por suposição, inferência de partido ou de
+        discurso de campanha não registrado oficialmente. Quando o documento ainda não foi processado por tema,
+        mostramos o PDF oficial completo em vez de resumir sem fonte.
       </p>
 
-      <h2>Como comparamos sua resposta com a posição do candidato</h2>
-      <ul>
-        <li><strong>Convergente</strong> — sua resposta e a posição documentada coincidem.</li>
-        <li><strong>Parcialmente convergente</strong> — posições próximas, mas não idênticas, na escala.</li>
-        <li><strong>Diferente</strong> — posições distantes na escala.</li>
-        <li><strong>Sem informação suficiente</strong> — você respondeu &ldquo;não sei&rdquo;, ou o candidato não tem posição documentada com fonte para essa pergunta.</li>
-      </ul>
+      <h2>Como exibimos pesquisas eleitorais</h2>
+      <p>
+        Toda pesquisa mostrada em <a href="/pesquisas">Pesquisas</a> vem de um instituto registrado no TSE (ex.:
+        Quaest, Datafolha, Genial/Quaest, Paraná Pesquisas) e sempre traz instituto, data de campo, tamanho da
+        amostra e margem de erro — exatamente como o instituto publicou. Nunca calculamos, ajustamos ou projetamos
+        um número nosso a partir de pesquisas; nunca fazemos média ou &ldquo;poll of polls&rdquo;. Se um instituto
+        não publicar margem de erro ou metodologia, isso aparece como ausente, não é preenchido por suposição.
+      </p>
 
       <h2>Como usamos IA</h2>
       <p>
@@ -37,8 +32,9 @@ export default function MetodologiaPage() {
 
       <h2>Como candidatos são ordenados</h2>
       <p>
-        Listagens usam ordenação neutra: alfabética, por número de urna ou por partido. Nunca ordenamos com base no
-        perfil político do usuário nem cobramos para aparecer em posição de destaque.
+        Listagens usam ordenação neutra: alfabética, por número de urna ou por partido (presidenciáveis aparecem
+        primeiro por serem a eleição nacional). Nunca ordenamos com base no perfil político do usuário nem cobramos
+        para aparecer em posição de destaque.
       </p>
 
       <h2>Como verificamos fontes</h2>

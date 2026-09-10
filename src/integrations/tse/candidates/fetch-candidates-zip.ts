@@ -27,7 +27,11 @@ export interface DownloadedCandidatesFile {
   sourceUrl: string;
 }
 
-function extractConsolidatedCsv(buffer: ArrayBuffer) {
+/**
+ * Genérico o bastante para qualquer ZIP do TSE no mesmo padrão (um CSV por
+ * UF + `_BRASIL.csv` consolidado) — reaproveitado por `fetch-assets-zip.ts`.
+ */
+export function extractConsolidatedCsv(buffer: ArrayBuffer) {
   return JSZip.loadAsync(buffer).then(async (zip) => {
     const consolidatedName = Object.keys(zip.files).find((n) => /_BRASIL\.csv$/i.test(n));
     const targetName = consolidatedName ?? Object.keys(zip.files).find((n) => n.toLowerCase().endsWith(".csv"));

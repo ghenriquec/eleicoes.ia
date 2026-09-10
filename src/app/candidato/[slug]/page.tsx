@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { UserRound, Globe, ExternalLink, FileText } from "lucide-react";
+import { UserRound, ExternalLink, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MockDataBadge } from "@/components/ui/mock-data-badge";
+import { SocialIcon } from "@/components/candidate/social-icon";
+import { NewsFeed } from "@/components/news/news-feed";
 import { getCandidateBySlug } from "@/lib/data/candidates";
 import { getState } from "@/lib/domain/states";
+import { formatBallotName } from "@/lib/format-name";
+import { getLatestElectionNews } from "@/integrations/news/news-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +17,10 @@ export async function generateMetadata({ params }: PageProps<"/candidato/[slug]"
   const { slug } = await params;
   const candidate = await getCandidateBySlug(slug);
   if (!candidate) return {};
+  const displayName = formatBallotName(candidate.ballotName);
   return {
-    title: `${candidate.ballotName} — ${candidate.office.name} ${candidate.state.uf} 2026`,
-    description: `Dados oficiais da candidatura de ${candidate.ballotName} (${candidate.party.acronym}, número ${candidate.ballotNumber}) a ${candidate.office.name} por ${candidate.state.name}.`,
+    title: `${displayName} — ${candidate.office.name} ${candidate.state.uf} 2026`,
+    description: `Dados oficiais da candidatura de ${displayName} (${candidate.party.acronym}, número ${candidate.ballotNumber}) a ${candidate.office.name} por ${candidate.state.name}.`,
   };
 }
 
@@ -35,6 +40,10 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
   if (!candidate) notFound();
 
   const totalAssets = candidate.assets.reduce((sum, a) => sum + a.valueCents, BigInt(0));
+
+  // Feed editorial só existe pra Presidente/Governador — mesmo recorte do provider de notícias.
+  const hasNewsCoverage = candidate.office.slug === "presidente" || candidate.office.slug === "governador";
+  const candidateNews = hasNewsCoverage ? (await getLatestElectionNews(100)).filter((n) => n.matchedCandidateSlug === candidate.slug) : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -58,7 +67,7 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <span className="font-mono text-3xl font-bold tabular-nums text-accent-ink">{candidate.ballotNumber}</span>
-            <h1 className="font-display text-2xl font-semibold sm:text-3xl">{candidate.ballotName}</h1>
+            <h1 className="font-display text-2xl font-semibold sm:text-3xl">{formatBallotName(candidate.ballotName)}</h1>
           </div>
           <p className="mt-1 text-text-muted">
             {candidate.office.name} · {candidate.state.name} ({candidate.state.uf})
@@ -81,7 +90,7 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
       <Card className="mt-8">
         <h2 className="font-display text-lg font-semibold">Dados públicos eleitorais</h2>
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-          <Field label="Nome completo" value={candidate.fullName} />
+          <Field label="Nome completo" value={candidate.fullName ? formatBallotName(candidate.fullName) : null} />
           <Field label="Ocupação declarada" value={candidate.occupation} />
           <Field label="Grau de instrução" value={candidate.educationLevel} />
           <Field label="Ano de nascimento" value={candidate.birthYear ? String(candidate.birthYear) : null} />
@@ -165,11 +174,21 @@ export default async function CandidatePage({ params }: PageProps<"/candidato/[s
                 rel="noopener"
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:border-accent"
               >
-                <Globe size={15} />
+                <SocialIcon platform={sn.platform} />
                 {sn.platform}
                 <ExternalLink size={12} className="text-taupe-ink" />
               </a>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Notícias */}
+      {hasNewsCoverage && candidateNews.length > 0 && (
+        <Card className="mt-4">
+          <h2 className="font-display text-lg font-semibold">Últimas notícias</h2>
+          <div className="mt-3">
+            <NewsFeed items={candidateNews} />
           </div>
         </Card>
       )}

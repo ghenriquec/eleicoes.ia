@@ -79,10 +79,12 @@ model Federation {
 }
 
 model Coalition {
-  id         String      @id @default(cuid())
-  tseId      String      @unique
-  name       String
-  candidates Candidate[]
+  id          String      @id @default(cuid())
+  tseId       String      @unique
+  name        String
+  /// DS_COMPOSICAO_COLIGACAO do TSE — quais partidos formam a coligação
+  composition String?
+  candidates  Candidate[]
 }
 
 // ---------------------------------------------------------------------------
@@ -161,8 +163,18 @@ model Candidate {
   occupation      String?
   educationLevel  String?
   birthYear       Int?
+  /// DT_NASCIMENTO cru do TSE (DD/MM/AAAA) — birthYear já deriva daqui, mantido por retrocompatibilidade
+  birthDateRaw    String?
   placeOfBirth    String?
   nationality     String?
+  /// NR_CPF_CANDIDATO — TSE publica como dado público de transparência eleitoral
+  cpf             String?
+  /// DS_GENERO
+  gender          String?
+  /// DS_ESTADO_CIVIL
+  maritalStatus   String?
+  /// DS_COR_RACA
+  raceColor       String?
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -178,9 +190,40 @@ model Candidate {
   proposal        GovernmentProposal?
   topicPositions  CandidateTopicPosition[]
   results         CandidateResult[]
+  pollResults     PollResult[]
+  /// vice-presidente/vice-governador da mesma chapa (só Presidente/Governador têm) — dado leve, não um Candidate completo
+  runningMate     RunningMate?
 
   @@index([stateId, officeId])
   @@index([partyId])
+}
+
+/// Vice-presidente/vice-governador — casado com o titular por SQ_COLIGACAO na
+/// importação (mesma coligação, mesma UF, mesmo cargo-família). Registro
+/// enxuto (não um Candidate completo) porque não é uma candidatura navegável
+/// à parte no produto — só aparece dentro do perfil do titular.
+model RunningMate {
+  id             String    @id @default(cuid())
+  candidate      Candidate @relation(fields: [candidateId], references: [id])
+  candidateId    String    @unique
+  tseCandidateId String    @unique
+
+  ballotName     String
+  fullName       String
+  ballotNumber   String
+  partyAcronym   String
+  partyName      String?
+  photoUrl       String?
+
+  occupation     String?
+  educationLevel String?
+  birthYear      Int?
+  birthDateRaw   String?
+  placeOfBirth   String?
+  cpf            String?
+  gender         String?
+  maritalStatus  String?
+  raceColor      String?
 }
 
 model CandidateAsset {
@@ -407,4 +450,48 @@ model AuditLog {
   before     Json?
   after      Json?
   createdAt  DateTime  @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Pesquisas eleitorais
+// ---------------------------------------------------------------------------
+
+/// Uma pesquisa publicada por um instituto (Quaest, Datafolha etc.). Nunca
+/// calculamos, ajustamos ou fazemos média entre pesquisas — cada `Poll` é
+/// exatamente o que o instituto divulgou, com fonte e data visíveis
+/// (blueprint "PESQUISAS" — ver docs/tse-integration.md §9).
+model Poll {
+  id             String   @id @default(cuid())
+  institute      String   // "Datafolha", "Quaest" — nome exatamente como o instituto se identifica
+  office         String   // "presidente" | "governador"
+  uf             String   // "BR" pra presidente, sigla do estado pra governador
+  round          Int      // 1 ou 2 turno
+  questionType   String   // "Estimulada", "Espontânea", "Rejeição" — como o instituto rotula a pergunta
+  fieldworkStart DateTime?
+  fieldworkEnd   DateTime?
+  publishedAt    DateTime
+  sampleSize     Int?
+  marginOfError  Float?   // pontos percentuais — null se o instituto não informou
+  sourceName     String   // ex. "G1 (dados: Datafolha)"
+  sourceUrl      String
+  createdAt      DateTime @default(now())
+  results        PollResult[]
+
+  @@index([office, uf, round])
+}
+
+model PollResult {
+  id            String    @id @default(cuid())
+  poll          Poll      @relation(fields: [pollId], references: [id])
+  pollId        String
+  /// nome exatamente como o instituto/veículo divulgou — nunca reescrito
+  candidateName String
+  partyAcronym  String?
+  /// 0..100 — nunca 0..1, pra evitar erro de exibição (blueprint "PESQUISAS")
+  percentage    Float
+  /// null pra linhas que não são candidato (Indecisos, Branco/Nulo)
+  candidate     Candidate? @relation(fields: [candidateId], references: [id])
+  candidateId   String?
+
+  @@index([pollId])
 }

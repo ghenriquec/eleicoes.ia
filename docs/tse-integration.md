@@ -194,12 +194,48 @@ na página do titular.
 1. Rodar o worker de verdade (`npm run tse:sync-candidates`) direto contra o
    CDN a partir de uma rede sem o bloqueio deste ambiente — o pipeline já foi
    validado ponta a ponta com dado real via Wayback Machine, falta só trocar
-   a fonte.
+   a fonte. O mesmo vale para `syncAssets`/`syncSocialNetworks`.
 2. Monitorar `ele-c.json` até o pleito de resultados de 2026 aparecer.
 3. Ler por completo a Resolução TSE nº 23.751/2026 antes de habilitar sync
    automatizado em produção.
-4. Validar Bens, Redes sociais, Fotos e Proposta de governo contra um payload
-   real (só o recurso Candidatos foi validado nesta sessão).
+4. ✅ Validados contra payload real em 30/08/2026: Candidatos (19.879),
+   Fotos (13.579), Bens declarados (`bem_candidato_2026.zip`, 71.002 itens,
+   0 rejeições após o fix do parser de CSV — ver §9) e Redes sociais
+   (`rede_social_candidato_2026.zip`, 40.735 links, 0 rejeições).
+   Ainda faltam: Proposta de governo e Prestação de contas (ver item 5).
+5. **Prestação de contas / ranking de doadores — bloqueado neste ambiente.**
+   `divulgacandcontas.tse.jus.br` (portal "Divulgação de Candidaturas e
+   Contas Eleitorais", inclusive a API REST que ele consome,
+   `/divulga/rest/v1/...`) está atrás do mesmo Akamai que bloqueia os outros
+   hosts do TSE — funciona só via navegador de verdade (confirmado
+   navegando manualmente até o perfil de um candidato), 403 em toda
+   chamada `curl`/`fetch` de servidor. Não é uma opção fazer scraping de
+   ~20.900 perfis individuais via automação de navegador — fora de escala e
+   de propósito para essa ferramenta.
+   O dataset correto para "ranking de doadores" é o bulk oficial
+   **"Prestação de Contas Eleitorais - 2026"**
+   (`dadosabertos.tse.jus.br/dataset/prestacao-de-contas-eleitorais-2026`,
+   recurso "Prestação de contas de candidatos" →
+   `cdn.tse.jus.br/estatistica/sead/odsele/prestacao_contas/prestacao_de_contas_eleitorais_candidatos_2026.zip`),
+   que reúne receitas (inclusive por doador originário), despesas e
+   extratos bancários num único ZIP — mesmo padrão dos outros datasets.
+   Diferente deles, esse arquivo **não tem nenhuma captura no Wayback
+   Machine ainda** para 2026 (confirmado via CDX API em 30/08/2026), e pelos
+   equivalentes de 2018/2022 (287 MB e 138–371 MB respectivamente) é grande
+   demais para uma captura sob demanda.
+   **Atualização 31/08/2026:** confirmamos que navegar (via browser real) até
+   `web.archive.org/save/<url>` aciona uma captura nova sem precisar de
+   conta — foi assim que recapturamos as fotos e ganhamos ~6.300 candidatos
+   com foto que faltavam (ver §5 do README). Mas esse caminho tem teto de
+   tamanho: o próprio ZIP de fotos de SP (15 MB) já deu 504 do lado do TSE
+   pro crawler do Wayback duas vezes seguidas antes de completar, e o de
+   contas eleitorais é 10-25x maior — não é razoável esperar que funcione.
+   Path a seguir: (a) tentar de novo mais adiante — o Wayback costuma
+   arquivar os outros datasets desse portal poucos dias após a publicação;
+   (b) rodar `npm run tse:sync-candidates`-equivalente de uma rede sem o
+   bloqueio; ou (c) o usuário baixar o ZIP manualmente e apontar um script
+   de importação (a construir, mesmo padrão de `import-real-assets.ts`) pro
+   arquivo local.
 
 ## 6. Estratégia de cache e atualização
 
@@ -219,3 +255,22 @@ na página do titular.
 2. Rodar `npm test` — os contract tests comparam a fixture contra os schemas Zod e apontam exatamente qual campo mudou.
 3. Atualizar o schema/mapper correspondente, nunca o parser genérico.
 4. Documentar a mudança nesta tabela, com data.
+
+## 9. Bug real encontrado: quebra de linha embutida em campo entre aspas
+
+Ao importar `bem_candidato_2026.zip` em 30/08/2026, 164 de 76.487 linhas
+falharam a validação de schema com campos visivelmente deslocados (ex.:
+`DT_GERACAO` recebendo o texto de uma descrição de bem). Causa: `parseCsv`
+(`src/integrations/tse/parsers/csv.ts`) quebrava o texto inteiro em linhas
+por `\n`/`\r\n` **antes** de interpretar aspas — um campo de descrição de
+bem com quebra de linha embutida (CSV válido, e o TSE usa isso de fato)
+partia a linha em duas, corrompendo aquela linha e a seguinte.
+
+Corrigido: o parser agora tokeniza o texto inteiro num único passe,
+respeitando `inQuotes` através de quebras de linha (`tokenizeCsv`). Depois
+do fix, o mesmo arquivo importou com **0 rejeições** (76.365 linhas, a
+contagem mudou porque as linhas antes fantasmas-partidas por aspas deixaram
+de existir). Testes de regressão em
+`src/integrations/tse/parsers/csv.test.ts`. Esse parser é compartilhado por
+todos os datasets (`consulta_cand`, `bem_candidato`, `rede_social_candidato`)
+— qualquer novo dataset que passe por ele já herda o fix.

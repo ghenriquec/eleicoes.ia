@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 import { STATES } from "@/lib/domain/states";
 import { OFFICES } from "@/lib/domain/offices";
 
@@ -82,20 +82,23 @@ function Select({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+    <label className="flex items-center gap-2 rounded-xl border border-border bg-surface py-2 pl-3 pr-2.5 text-sm transition-colors hover:border-accent has-[:focus-visible]:border-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-tint">
       <span className="text-taupe-ink">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent font-medium outline-none"
-        aria-label={label}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <span className="relative flex items-center">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="appearance-none bg-transparent pr-5 font-medium outline-none"
+          aria-label={label}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={14} strokeWidth={2.25} className="pointer-events-none absolute right-0 text-taupe-ink" />
+      </span>
     </label>
   );
 }

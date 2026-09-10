@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clearAllLocalData } from "@/lib/quiz/storage";
+import { clearAllLocalData } from "@/lib/local-storage/storage";
 
 export function ClearDataButton() {
   const [cleared, setCleared] = useState(false);
@@ -14,7 +14,7 @@ export function ClearDataButton() {
         setCleared(true);
       }}
     >
-      {cleared ? "Dados apagados ✓" : "Apagar minhas respostas e minha cola"}
+      {cleared ? "Dados apagados ✓" : "Apagar meu estado salvo e minha cola"}
     </Button>
   );
 }

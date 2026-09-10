@@ -1,6 +1,12 @@
 import type { TseCandidateRow, TseAssetRow } from "../schemas/candidate.schema";
-import type { RawCandidateRecord } from "../types";
+import type { RawCandidateRecord, RawRunningMateRecord } from "../types";
 import { mapCandidateOfficeCode } from "../constants/offices";
+
+/** DS_CARGO dos vices — nunca viram Candidate completo, só RunningMate (ver mapRunningMateRow). */
+const VICE_OFFICE_DS_CARGO = new Set(["VICE-PRESIDENTE", "VICE-GOVERNADOR"]);
+export function isViceOfficeRow(dsCargo: string): boolean {
+  return VICE_OFFICE_DS_CARGO.has(dsCargo.trim().toUpperCase());
+}
 
 /**
  * O TSE usa os literais "#NULO" e "#NE" (e variações de caixa) como
@@ -33,6 +39,8 @@ export function mapCandidateRow(row: TseCandidateRow, sourceUrl: string): RawCan
     partyName: tseNullable(row.NM_PARTIDO),
     federation: tseNullable(row.NM_FEDERACAO),
     coalition: tseNullable(row.NM_COLIGACAO),
+    coalitionSqId: tseNullable(row.SQ_COLIGACAO),
+    coalitionComposition: tseNullable(row.DS_COMPOSICAO_COLIGACAO),
     // "#NE" = Justiça Eleitoral ainda não concluiu a análise da candidatura —
     // nunca mostrar como "deferida"/"indeferida" quando o TSE não decidiu.
     status: status ?? "AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL",
@@ -42,9 +50,36 @@ export function mapCandidateRow(row: TseCandidateRow, sourceUrl: string): RawCan
     birthDate: tseNullable(row.DT_NASCIMENTO),
     birthplace: tseNullable(row.SG_UF_NASCIMENTO),
     nationality: null, // não presente no dataset de candidatos — nunca inferido
+    cpf: tseNullable(row.NR_CPF_CANDIDATO),
+    gender: tseNullable(row.DS_GENERO),
+    maritalStatus: tseNullable(row.DS_ESTADO_CIVIL),
+    raceColor: tseNullable(row.DS_COR_RACA),
     photoUrl: null,
     sourceUrl,
     raw: row as unknown as Record<string, string>,
+  };
+}
+
+/** VICE-PRESIDENTE/VICE-GOVERNADOR — mesmo mapeamento de campos pessoais, mas nunca vira Candidate completo. */
+export function mapRunningMateRow(row: TseCandidateRow): RawRunningMateRecord {
+  return {
+    tseCandidateId: row.SQ_CANDIDATO,
+    uf: row.SG_UF,
+    isPresidentialTicket: row.DS_CARGO.trim().toUpperCase() === "VICE-PRESIDENTE",
+    coalitionSqId: tseNullable(row.SQ_COLIGACAO),
+    ballotName: row.NM_URNA_CANDIDATO,
+    fullName: row.NM_CANDIDATO,
+    ballotNumber: row.NR_CANDIDATO,
+    partyAbbreviation: row.SG_PARTIDO,
+    partyName: tseNullable(row.NM_PARTIDO),
+    occupation: tseNullable(row.DS_OCUPACAO),
+    education: tseNullable(row.DS_GRAU_INSTRUCAO),
+    birthDate: tseNullable(row.DT_NASCIMENTO),
+    birthplace: tseNullable(row.SG_UF_NASCIMENTO),
+    cpf: tseNullable(row.NR_CPF_CANDIDATO),
+    gender: tseNullable(row.DS_GENERO),
+    maritalStatus: tseNullable(row.DS_ESTADO_CIVIL),
+    raceColor: tseNullable(row.DS_COR_RACA),
   };
 }
 

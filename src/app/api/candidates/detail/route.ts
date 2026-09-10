@@ -15,8 +15,8 @@ export async function GET(request: Request) {
       office: true,
       party: true,
       assets: true,
-      topicPositions: { include: { question: { include: { topic: true } } } },
       sources: true,
+      proposal: { include: { excerpts: { include: { topic: true } } } },
     },
   });
 

@@ -37,6 +37,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# dado gerado localmente pelos imports do TSE (scripts/tse/import-photos.ts,
+# import-government-proposals.ts) — reproduzível a partir da fonte oficial, nunca commitado.
+/public/candidatos/
+/public/planos-de-governo/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

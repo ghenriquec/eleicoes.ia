@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MockDataBadge } from "@/components/ui/mock-data-badge";
+import { formatBallotName } from "@/lib/format-name";
 import type { CandidateCardData } from "@/lib/data/candidates";
 
 const STATUS_TONE: Record<string, "accent" | "danger" | "neutral"> = {
@@ -26,7 +27,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="font-mono text-base font-bold tabular-nums text-accent-ink">{candidate.ballotNumber}</span>
-          <span className="truncate font-display text-[15px] font-semibold">{candidate.ballotName}</span>
+          <span className="truncate font-display text-[15px] font-semibold">{formatBallotName(candidate.ballotName)}</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] text-text-muted">
           {candidate.office.name} · {candidate.party.acronym} · {candidate.state.uf}

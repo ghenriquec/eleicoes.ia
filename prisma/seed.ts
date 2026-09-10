@@ -4,7 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { STATES } from "../src/lib/domain/states";
 import { OFFICES } from "../src/lib/domain/offices";
 import { MOCK_PARTIES, generateMockCandidates } from "../src/lib/tse-client/mock-data";
-import { TOPICS, QUESTIONS } from "../src/lib/quiz/content";
+import { TOPICS } from "../src/lib/domain/topics";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -56,36 +56,11 @@ async function main() {
     ),
   );
 
-  // ---- Quiz: tópicos e perguntas ----
+  // ---- Temas (usados pelas propostas extraídas do plano de governo) ----
   const topicByslug = new Map<string, { id: string }>();
   for (const t of TOPICS) {
     const rec = await prisma.topic.upsert({ where: { slug: t.slug }, update: { name: t.name }, create: { slug: t.slug, name: t.name } });
     topicByslug.set(t.slug, rec);
-  }
-
-  const createdQuestions: { id: string; topicSlug: string }[] = [];
-  // Limpa perguntas antigas para permitir reseed idempotente em dev.
-  await prisma.candidateTopicPosition.deleteMany({});
-  await prisma.quizAnswerOption.deleteMany({});
-  await prisma.quizQuestion.deleteMany({});
-
-  for (let i = 0; i < QUESTIONS.length; i++) {
-    const q = QUESTIONS[i];
-    const topic = topicByslug.get(q.topicSlug);
-    if (!topic) throw new Error(`Tópico desconhecido: ${q.topicSlug}`);
-    const question = await prisma.quizQuestion.create({
-      data: {
-        topicId: topic.id,
-        text: q.text,
-        explanation: q.explanation ?? null,
-        order: i,
-        options: {
-          create: q.options.map((o, idx) => ({ text: o.text, normalizedPosition: o.normalizedPosition, order: idx })),
-        },
-      },
-      include: { options: true },
-    });
-    createdQuestions.push({ id: question.id, topicSlug: q.topicSlug });
   }
 
   // ---- Candidatos MOCK ----
@@ -177,35 +152,23 @@ async function main() {
         },
       });
 
-      // Posições de exemplo em 4 temas, para demonstrar o comparador.
+      // Trechos de exemplo em 4 temas, para demonstrar o comparador.
       const sampleTopics = ["economia", "saude", "seguranca", "meio-ambiente"];
       for (const topicSlug of sampleTopics) {
-        const question = createdQuestions.find((q) => q.topicSlug === topicSlug);
-        if (!question) continue;
-        const position = ((created + topicSlug.length) % 5) - 2; // -2..2 determinístico
+        const topic = topicByslug.get(topicSlug);
+        if (!topic) continue;
         const excerptText = `Trecho de exemplo do plano de governo sobre ${topicSlug.replace("-", " ")}.`;
 
         await prisma.governmentProposalExcerpt.create({
           data: {
             proposalId: proposal.id,
-            topicId: topicByslug.get(topicSlug)!.id,
+            topicId: topic.id,
             originalText: excerptText,
-            summary: `Resumo de exemplo: posição ${position} em ${topicSlug}.`,
+            summary: `Resumo de exemplo sobre ${topicSlug.replace("-", " ")}.`,
             sourceDocument: "Plano de Governo (documento de exemplo)",
             sourceUrl: "mock://votocerto.ia/plano-de-governo-exemplo.pdf",
             sourcePage: 1 + (created % 40),
             extractionConfidence: 0.9,
-          },
-        });
-
-        await prisma.candidateTopicPosition.create({
-          data: {
-            candidateId: candidate.id,
-            questionId: question.id,
-            position,
-            confidence: 0.9,
-            sourceExcerpt: excerptText,
-            sourcePage: 1 + (created % 40),
           },
         });
       }
@@ -225,7 +188,7 @@ async function main() {
     },
   });
 
-  console.log(`OK: ${created} candidatos de EXEMPLO, ${createdQuestions.length} perguntas do quiz.`);
+  console.log(`OK: ${created} candidatos de EXEMPLO.`);
 }
 
 main()
