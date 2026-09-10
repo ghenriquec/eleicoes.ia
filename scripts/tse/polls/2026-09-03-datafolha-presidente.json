@@ -1,0 +1,27 @@
+{
+  "institute": "Datafolha",
+  "office": "presidente",
+  "uf": "BR",
+  "round": 1,
+  "questionType": "Estimulada",
+  "publishedAt": "2026-09-03",
+  "marginOfError": 2,
+  "sourceName": "G1 (dados: Datafolha)",
+  "sourceUrl": "https://g1.globo.com/politica/eleicoes/2026/pesquisa-eleitoral/presidente-1-turno-datafolha/",
+  "results": [
+    { "candidateName": "Lula", "partyAcronym": "PT", "percentage": 38 },
+    { "candidateName": "Flavio Bolsonaro", "partyAcronym": "PL", "percentage": 33 },
+    { "candidateName": "Escritor Augusto Cury", "percentage": 8 },
+    { "candidateName": "Ronaldo Caiado", "partyAcronym": "UNIÃO", "percentage": 4 },
+    { "candidateName": "Renan Santos", "percentage": 3 },
+    { "candidateName": "Zema", "partyAcronym": "NOVO", "percentage": 2 },
+    { "candidateName": "Samara", "percentage": 1 },
+    { "candidateName": "Edmilson Costa", "partyAcronym": "PCB", "percentage": 1 },
+    { "candidateName": "Rui Costa Pimenta", "partyAcronym": "PCO", "percentage": 1 },
+    { "candidateName": "Veterinário Wilson Grassi", "percentage": 0 },
+    { "candidateName": "Clariana Barão", "percentage": 0 },
+    { "candidateName": "Hertz Dias", "percentage": 0 },
+    { "candidateName": "Em Branco/Nulo/Nenhum", "percentage": 6 },
+    { "candidateName": "Indecisos", "percentage": 3 }
+  ]
+}

@@ -1,18 +1,17 @@
 import { prisma } from "@/lib/db/client";
-import { OfficialResourceNotConfirmedError } from "../errors";
+import { syncAssets as syncAssetsImpl } from "./asset-sync";
 import type { CandidateAsset, SyncResult, TseCandidateAssetsDeclarationProvider } from "../types";
 
 /**
- * Bens declarados (briefing "BENS"). Leitura já funciona contra o schema
- * existente. `syncAssets()` segue o mesmo padrão de download do CDN dos
- * candidatos (`bem_candidato_{ano}.zip`, mesma pasta `odsele`) — ainda não
- * confirmado com um payload real, então lança erro explícito em vez de
- * fingir sucesso (docs/tse-integration.md §5).
+ * Bens declarados (briefing "BENS"). `syncAssets()` segue o mesmo padrão de
+ * download do CDN dos candidatos (`bem_candidato_{ano}.zip`, mesma pasta
+ * `odsele`) — confirmado contra um payload real em 30/08/2026, ver
+ * docs/tse-integration.md §5.
  */
 export function createTseAssetsProvider(): TseCandidateAssetsDeclarationProvider {
   return {
-    async syncAssets(): Promise<SyncResult> {
-      throw new OfficialResourceNotConfirmedError("bem_candidato (bens declarados)");
+    async syncAssets(electionYear: number): Promise<SyncResult> {
+      return syncAssetsImpl(electionYear);
     },
 
     async getCandidateAssets(candidateId: string): Promise<CandidateAsset[]> {

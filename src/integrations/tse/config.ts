@@ -38,6 +38,16 @@ export const TSE_CONFIG = {
     "TSE_CANDIDATES_COMPLEMENTARY_URL",
     "https://divulgacandcontas.tse.jus.br/divulga/",
   ),
+  /** Padrão de CDN confirmado (docs/tse-integration.md §5) — mesmo formato do ZIP de candidatos: um CSV por UF + `_BRASIL.csv` consolidado. */
+  assetsCdnBaseUrl: env(
+    "TSE_ASSETS_CDN_BASE_URL",
+    "https://cdn.tse.jus.br/estatistica/sead/odsele/bem_candidato",
+  ),
+  /** Padrão de CDN confirmado (docs/tse-integration.md §5) — mesma pasta do ZIP de candidatos. */
+  socialNetworksCdnBaseUrl: env(
+    "TSE_SOCIAL_NETWORKS_CDN_BASE_URL",
+    "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand",
+  ),
 
   // --- Resultados / apuração ---
   resultsBaseUrl: env("TSE_RESULTS_BASE_URL", "https://resultados.tse.jus.br/oficial"),

@@ -5,6 +5,7 @@ import { ElectionCountdown } from "./election-countdown";
 import { ELECTION_CONFIG, deriveElectionStatus } from "@/lib/domain/election-config";
 import { getTseElectionDataProvider } from "@/integrations/tse";
 import type { ElectionOffice } from "@/integrations/tse/constants/offices";
+import { formatBallotName } from "@/lib/format-name";
 
 /**
  * Painel de apuração que consulta o TSE de verdade a cada carregamento (via
@@ -147,7 +148,7 @@ function OfficeResultsPanel({ result, label }: { result: import("@/integrations/
           <li key={c.candidateId} className="flex items-center gap-3 rounded-xl border border-border p-3">
             <UserRound size={18} className="flex-none text-taupe" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{c.ballotName}</p>
+              <p className="truncate text-sm font-semibold">{formatBallotName(c.ballotName)}</p>
               <p className="text-xs text-text-muted">{c.party}</p>
             </div>
             <div className="text-right">

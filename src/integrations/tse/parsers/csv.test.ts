@@ -26,6 +26,21 @@ describe("parseCsv", () => {
     const rows = parseCsv("A;B\r\n1;2\n3;4");
     expect(rows).toHaveLength(2);
   });
+
+  it("preserva quebra de linha dentro de um campo entre aspas (achado real em bem_candidato_2026)", () => {
+    const rows = parseCsv('SQ_CANDIDATO;DS_BEM_CANDIDATO;VR_BEM_CANDIDATO\n123;"POUPANÇA CAIXA: R$ 1.822,88\nPOUPANÇA BRADESCO: R$ 32.143,87";50000,00\n456;CASA;100000,00');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].SQ_CANDIDATO).toBe("123");
+    expect(rows[0].DS_BEM_CANDIDATO).toBe("POUPANÇA CAIXA: R$ 1.822,88\nPOUPANÇA BRADESCO: R$ 32.143,87");
+    expect(rows[0].VR_BEM_CANDIDATO).toBe("50000,00");
+    expect(rows[1].SQ_CANDIDATO).toBe("456");
+  });
+
+  it("ignora linhas em branco no meio ou no fim do arquivo", () => {
+    const rows = parseCsv("A;B\n1;2\n\n3;4\n");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toEqual({ A: "3", B: "4" });
+  });
 });
 
 describe("acentuação e encoding (briefing 'ENCODING' — nunca assumir UTF-8)", () => {

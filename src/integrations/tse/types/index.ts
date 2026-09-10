@@ -35,6 +35,8 @@ export interface RawCandidateRecord {
   partyName: string | null;
   federation: string | null;
   coalition: string | null;
+  coalitionSqId: string | null;
+  coalitionComposition: string | null;
   status: string;
   statusDescription: string | null;
   occupation: string | null;
@@ -42,9 +44,34 @@ export interface RawCandidateRecord {
   birthDate: string | null;
   birthplace: string | null;
   nationality: string | null;
+  cpf: string | null;
+  gender: string | null;
+  maritalStatus: string | null;
+  raceColor: string | null;
   photoUrl: string | null;
   sourceUrl: string;
   raw: Record<string, string>;
+}
+
+/** Vice-presidente/vice-governador — extraído à parte, nunca vira um Candidate completo (ver mapCandidateRow). */
+export interface RawRunningMateRecord {
+  tseCandidateId: string;
+  uf: string;
+  isPresidentialTicket: boolean; // true = VICE-PRESIDENTE, false = VICE-GOVERNADOR
+  coalitionSqId: string | null;
+  ballotName: string;
+  fullName: string;
+  ballotNumber: string;
+  partyAbbreviation: string;
+  partyName: string | null;
+  occupation: string | null;
+  education: string | null;
+  birthDate: string | null;
+  birthplace: string | null;
+  cpf: string | null;
+  gender: string | null;
+  maritalStatus: string | null;
+  raceColor: string | null;
 }
 
 export interface CandidateFilters {

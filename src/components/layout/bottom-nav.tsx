@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, ListChecks, ClipboardList, Radio } from "lucide-react";
+import { Home, Users, Newspaper, LineChart, ClipboardList, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "Início", icon: Home },
   { href: "/candidatos", label: "Candidatos", icon: Users },
-  { href: "/quiz", label: "Quiz", icon: ListChecks },
+  { href: "/noticias", label: "Notícias", icon: Newspaper },
+  { href: "/pesquisas", label: "Pesquisas", icon: LineChart },
   { href: "/minha-cola", label: "Minha cola", icon: ClipboardList },
   { href: "/apuracao", label: "Apuração", icon: Radio },
 ];

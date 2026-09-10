@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Persistência 100% local do quiz e da cola (briefing §32). Nunca existe uma
- * chamada de rede aqui — Tier 2 (dado sensível) nunca sai do dispositivo.
+ * Persistência 100% local do estado e da cola (briefing §32). Nunca existe
+ * uma chamada de rede aqui — Tier 2 (dado sensível) nunca sai do dispositivo.
  * Ver blueprint §08 (Modelo de privacidade).
  */
 
@@ -10,8 +10,6 @@ const KEYS = {
   uf: "votocerto:uf",
   ufSource: "votocerto:uf-source",
   geoAsked: "votocerto:geo-asked",
-  topics: "votocerto:quiz:topics",
-  answers: "votocerto:quiz:answers",
   ballot: "votocerto:ballot",
 } as const;
 
@@ -65,38 +63,12 @@ export function markGeoAsked() {
   safeSet(KEYS.geoAsked, true);
 }
 
-export function getSavedTopics(): string[] {
-  return safeGet<string[]>(KEYS.topics, []);
-}
-export function saveTopics(topicSlugs: string[]) {
-  safeSet(KEYS.topics, topicSlugs);
-}
-
-/** questionId -> normalizedPosition escolhido (ou null se "não sei") */
-export type QuizAnswers = Record<string, number | null>;
-
-export function getSavedAnswers(): QuizAnswers {
-  return safeGet<QuizAnswers>(KEYS.answers, {});
-}
-export function saveAnswer(questionId: string, value: number | null) {
-  const current = getSavedAnswers();
-  current[questionId] = value;
-  safeSet(KEYS.answers, current);
-}
-
-export function clearQuizData() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(KEYS.topics);
-  window.localStorage.removeItem(KEYS.answers);
-}
-
 export function clearBallot() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEYS.ballot);
 }
 
 export function clearAllLocalData() {
-  clearQuizData();
   clearBallot();
   clearUF();
   if (typeof window === "undefined") return;

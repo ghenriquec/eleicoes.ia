@@ -2,12 +2,17 @@ import Link from "next/link";
 import { ShieldCheck, Sparkles, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NewsFeed } from "@/components/news/news-feed";
 import { STATES } from "@/lib/domain/states";
 import { ELECTION_CONFIG, deriveElectionStatus, isLiveResultsPhase } from "@/lib/domain/election-config";
+import { getLatestElectionNews } from "@/integrations/news/news-provider";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
   const status = deriveElectionStatus(new Date(), ELECTION_CONFIG);
   const live = isLiveResultsPhase(status);
+  const news = await getLatestElectionNews(8);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
@@ -49,7 +54,7 @@ export default function Home() {
       <section className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <TrustCard icon={ShieldCheck} title="Dados oficiais do TSE" text="Candidaturas e resultados vêm direto da Justiça Eleitoral — nunca inventados." />
         <TrustCard icon={Sparkles} title="Apartidário" text="Nenhum candidato paga para aparecer primeiro ou recebe recomendação de voto." />
-        <TrustCard icon={Lock} title="Privacidade por padrão" text="Suas respostas do quiz e sua cola ficam só no seu aparelho." />
+        <TrustCard icon={Lock} title="Privacidade por padrão" text="Sua cola eleitoral fica só no seu aparelho — nunca é enviada pra nenhum servidor." />
       </section>
 
       <section className="mt-16">
@@ -76,10 +81,10 @@ export default function Home() {
       <section className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StepCard
           step="01"
-          title="Faça o quiz"
-          text="Responda perguntas sobre suas prioridades e posições em temas concretos — sem pegadinha partidária."
-          href="/quiz"
-          cta="Começar o quiz"
+          title="Veja as pesquisas"
+          text="Projeções de institutos como Quaest e Datafolha para presidente e governador, atualizadas conforme saem."
+          href="/pesquisas"
+          cta="Ver pesquisas"
         />
         <StepCard
           step="02"
@@ -88,6 +93,19 @@ export default function Home() {
           href="/minha-cola"
           cta="Montar cola"
         />
+      </section>
+
+      <section className="mt-16">
+        <div className="mb-5 flex items-baseline justify-between">
+          <h2 className="font-display text-xl font-semibold">Últimas</h2>
+          <p className="font-mono text-xs text-taupe-ink">Presidência e governos estaduais</p>
+        </div>
+        <Card>
+          <NewsFeed items={news} />
+        </Card>
+        <p className="mt-3 text-xs text-taupe-ink">
+          Agregado de feeds públicos (G1, UOL, CNN Brasil, BBC News Brasil) — cada matéria linka pra fonte original.
+        </p>
       </section>
     </div>
   );

@@ -1,86 +1,106 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — votocerto.ia (blueprint §14).
- * Paleta fornecida: Onyx / Jungle Teal / Celadon / Alabaster / Taupe.
- * Nunca vermelho, azul partidário ou verde-amarelo institucional.
+ * Design tokens — votocerto.ia.
+ * Paleta: Marfim / Petróleo / Terracota (ver docs/tse-integration.md para
+ * proveniência de dado — isto é só identidade visual).
+ * Vermelho/verde ficam reservados a estados de sistema (erro, sucesso,
+ * atraso) — nunca usados pra "julgar" uma candidatura ou posição política.
  */
 
 :root {
-  --bg: #eae6e5;
+  --bg: #f7f7f3;
   --surface: #ffffff;
-  --surface-2: #f2eeec;
-  --text: #12130f;
-  --text-muted: #5a5148;
-  --border: #d9d2ce;
-  --border-strong: #c7bdb7;
+  --surface-2: #eeede7;
+  --text: #17191c;
+  --text-muted: #60656d;
+  --border: #dadbd5;
+  --border-strong: #c3c4bc;
 
-  --accent: #5b9279;
-  --accent-ink: #2f5a47;
-  --accent-tint: #e4f0e9;
-  --accent2: #8fcb9b;
-  --accent2-tint: #eaf6ee;
+  --accent: #27565c;
+  --accent-ink: #1d4146;
+  --accent-tint: #e1ecea;
+  --accent2: #c86d4a;
+  --accent2-tint: #f5e2d9;
 
-  --taupe: #8f8073;
-  --taupe-ink: #5a5148;
-  --taupe-tint: #f1ece7;
+  --taupe: #9a9d96;
+  --taupe-ink: #60656d;
+  --taupe-tint: #eeede7;
 
-  --danger: #a5432f;
-  --danger-tint: #f7e8e4;
+  --danger: #b34a48;
+  --danger-tint: #f6e3e2;
+  --success: #377a63;
+  --success-tint: #e1eee8;
+  --warning: #b77935;
+  --warning-tint: #f5e9dc;
+  --info: #496d91;
+  --info-tint: #e3e9f0;
 
-  --focus-ring: #2f5a47;
+  --focus-ring: #1d4146;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121310;
-    --surface: #191a15;
-    --surface-2: #1e1f19;
-    --text: #eae6e5;
-    --text-muted: #b3a89b;
-    --border: #332f28;
-    --border-strong: #453f36;
+    --bg: #111416;
+    --surface: #202527;
+    --surface-2: #181c1e;
+    --text: #f4f4ef;
+    --text-muted: #a9adad;
+    --border: #343a3c;
+    --border-strong: #454c4f;
 
-    --accent: #8fcb9b;
-    --accent-ink: #a9dab3;
-    --accent-tint: rgba(143, 203, 155, 0.12);
-    --accent2: #5b9279;
-    --accent2-tint: rgba(91, 146, 121, 0.2);
+    --accent: #74a8a7;
+    --accent-ink: #9bc3c2;
+    --accent-tint: rgba(116, 168, 167, 0.14);
+    --accent2: #e0906d;
+    --accent2-tint: rgba(224, 144, 109, 0.16);
 
-    --taupe: #a89a8b;
-    --taupe-ink: #b3a89b;
-    --taupe-tint: rgba(143, 128, 115, 0.16);
+    --taupe: #82898b;
+    --taupe-ink: #a9adad;
+    --taupe-tint: rgba(169, 173, 173, 0.12);
 
-    --danger: #e08469;
-    --danger-tint: rgba(165, 67, 47, 0.18);
+    --danger: #d97a72;
+    --danger-tint: rgba(179, 74, 72, 0.18);
+    --success: #4fa787;
+    --success-tint: rgba(79, 167, 135, 0.16);
+    --warning: #d99a55;
+    --warning-tint: rgba(217, 154, 85, 0.16);
+    --info: #7398be;
+    --info-tint: rgba(115, 152, 190, 0.16);
 
-    --focus-ring: #8fcb9b;
+    --focus-ring: #9bc3c2;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #121310;
-  --surface: #191a15;
-  --surface-2: #1e1f19;
-  --text: #eae6e5;
-  --text-muted: #b3a89b;
-  --border: #332f28;
-  --border-strong: #453f36;
+  --bg: #111416;
+  --surface: #202527;
+  --surface-2: #181c1e;
+  --text: #f4f4ef;
+  --text-muted: #a9adad;
+  --border: #343a3c;
+  --border-strong: #454c4f;
 
-  --accent: #8fcb9b;
-  --accent-ink: #a9dab3;
-  --accent-tint: rgba(143, 203, 155, 0.12);
-  --accent2: #5b9279;
-  --accent2-tint: rgba(91, 146, 121, 0.2);
+  --accent: #74a8a7;
+  --accent-ink: #9bc3c2;
+  --accent-tint: rgba(116, 168, 167, 0.14);
+  --accent2: #e0906d;
+  --accent2-tint: rgba(224, 144, 109, 0.16);
 
-  --taupe: #a89a8b;
-  --taupe-ink: #b3a89b;
-  --taupe-tint: rgba(143, 128, 115, 0.16);
+  --taupe: #82898b;
+  --taupe-ink: #a9adad;
+  --taupe-tint: rgba(169, 173, 173, 0.12);
 
-  --danger: #e08469;
-  --danger-tint: rgba(165, 67, 47, 0.18);
+  --danger: #d97a72;
+  --danger-tint: rgba(179, 74, 72, 0.18);
+  --success: #4fa787;
+  --success-tint: rgba(79, 167, 135, 0.16);
+  --warning: #d99a55;
+  --warning-tint: rgba(217, 154, 85, 0.16);
+  --info: #7398be;
+  --info-tint: rgba(115, 152, 190, 0.16);
 
-  --focus-ring: #8fcb9b;
+  --focus-ring: #9bc3c2;
 }
 
 @theme inline {
@@ -101,6 +121,12 @@
   --color-taupe-tint: var(--taupe-tint);
   --color-danger: var(--danger);
   --color-danger-tint: var(--danger-tint);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
 
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-sans: var(--font-public-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

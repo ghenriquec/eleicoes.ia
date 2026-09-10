@@ -89,11 +89,64 @@ Isso limpa qualquer dado de exemplo residual e importa o ZIP indicado. Em
 produção (ou de uma rede sem o bloqueio), use `npm run tse:sync-candidates`
 em vez disso — ele baixa direto do CDN.
 
+As **fotos oficiais** (19.868 de 19.879 candidatos com foto, dataset "Fotos
+de candidatos" do TSE — um ZIP por UF + BR para Presidente) também já estão
+importadas, pela mesma ponte de Wayback Machine — mas usando capturas do dia
+(ver nota sobre "Save Page Now" abaixo, não a captura mais antiga
+disponível), e salvas em `public/candidatos/{UF}/{tseCandidateId}.jpg`:
+
+```bash
+npx tsx scripts/tse/import-photos.ts /caminho/para/pasta-com-os-28-zips
+```
+
+O nome de cada imagem dentro do ZIP (`F{UF}{tseCandidateId}_div.jpg`) já
+carrega o mesmo `SQ_CANDIDATO` salvo em `Candidate.tseCandidateId` — o match
+é direto, sem heurística. Os poucos candidatos ainda sem foto continuam com
+`photoUrl: null` e mostram o ícone padrão — nunca uma foto genérica ou de
+outra pessoa.
+
+**Achado útil:** navegar (via browser real, não `curl`) até
+`web.archive.org/save/<url>` aciona uma captura nova sob demanda, sem
+precisar de conta — foi assim que as fotos foram atualizadas de 13.579 para
+quase todos os 19.879 candidatos (muitos tinham subido a foto depois da
+captura antiga usada na primeira importação). Funciona bem até ~15 MB por
+arquivo; acima disso o TSE costuma dar 504 pro crawler do Wayback antes de
+terminar — foi o caso do ZIP de bens/doações (ver nota abaixo).
+
+Os **bens declarados** (71.002 itens, 13.127 candidatos com pelo menos um
+bem — dataset `bem_candidato_2026.zip`, mesma ponte de Wayback Machine) e as
+**redes sociais** (39.791 links, dataset `rede_social_candidato_2026.zip`,
+zero caindo no genérico "Outro" — ver abaixo) também já estão importados:
+
+```bash
+npx tsx scripts/tse/import-real-assets.ts /caminho/para/bem_candidato_2026.zip
+npx tsx scripts/tse/import-real-social-networks.ts /caminho/para/rede_social_candidato_2026.zip
+```
+
+`DS_URL` de redes sociais é texto livre digitado pelo candidato (não
+validado pelo TSE) — `normalizeSocialUrl()` descarta o que não vira uma URL
+navegável de verdade (handle solto, nome sem link, e-mail digitado por
+engano no campo) em vez de inventar um destino; nunca reescreve o que a URL
+real diz, só limpa lixo colado depois dela (achado real do dataset).
+Reconhece um conjunto fixo de redes (com ícone próprio em
+[`social-icon.tsx`](src/components/candidate/social-icon.tsx)) e, pra
+qualquer outro domínio real declarado, usa o próprio host como rótulo em vez
+de um genérico "Outro" — assim cada link continua identificável mesmo sem
+ícone de marca. Ver
+[`src/integrations/tse/social-networks/normalize-url.ts`](src/integrations/tse/social-networks/normalize-url.ts).
+
 **Nota honesta sobre o dado:** em 30/08/2026, o TSE ainda não tinha concluído
 a análise de nenhuma candidatura — todos os 19.879 registros têm situação
-`"AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL"` (nunca inventamos "DEFERIDA"). Só
-o dataset de Candidatos foi validado; Bens, Redes sociais, Fotos e Proposta
-de governo ainda não foram importados (ver `docs/tse-integration.md` §5).
+`"AGUARDANDO ANÁLISE DA JUSTIÇA ELEITORAL"` (nunca inventamos "DEFERIDA").
+Candidatos, Fotos, Bens e Redes sociais foram validados; Proposta de governo
+e **ranking de doadores/prestação de contas** ainda não — este último está
+bloqueado neste ambiente: o CDN do TSE recusa acesso automatizado (mesmo
+Akamai dos outros recursos) e, diferente dos demais datasets, o arquivo de
+2026 (`prestacao_de_contas_eleitorais_candidatos_2026.zip`) ainda não tem
+nenhuma captura no Wayback Machine para servir de ponte — pelos anos
+anteriores (2018/2022) esse arquivo tem entre 140 MB e 370 MB, grande demais
+para uma captura sob demanda sem autenticação na Wayback. Ver
+`docs/tse-integration.md` §5.
 
 ## O que é real e o que é exemplo
 
@@ -124,6 +177,9 @@ npm run tse:sync-candidates  # roda o worker de sincronização de candidatos (d
 npm run tse:sync-results     # roda a descoberta de ciclo eleitoral (ao vivo)
 npm run tse:capture-fixture  # baixa e salva uma resposta real do TSE como fixture
 npx tsx scripts/tse/import-real-candidates.ts <zip>  # importa candidatos reais de um ZIP local
+npx tsx scripts/tse/import-photos.ts <pasta-com-zips> # importa fotos oficiais (28 ZIPs, um por UF + BR)
+npx tsx scripts/tse/import-real-assets.ts <zip>       # importa bens declarados
+npx tsx scripts/tse/import-real-social-networks.ts <zip> # importa redes sociais
 ```
 
 ## Admin

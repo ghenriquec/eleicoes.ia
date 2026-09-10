@@ -2,8 +2,8 @@ import { prisma } from "@/lib/db/client";
 import { downloadCandidatesZip, loadCandidatesZipFromFile, type DownloadedCandidatesFile } from "./fetch-candidates-zip";
 import { TSE_CONFIG } from "../config";
 import { TseCandidateRowSchema } from "../schemas/candidate.schema";
-import { mapCandidateRow } from "../mappers/candidate-mapper";
-import type { SyncResult } from "../types";
+import { mapCandidateRow, mapRunningMateRow, isViceOfficeRow } from "../mappers/candidate-mapper";
+import type { SyncResult, RawRunningMateRecord } from "../types";
 import type { SyncError } from "../errors";
 import { getCacheProvider } from "../cache";
 import { tseLog } from "../logger";
@@ -19,11 +19,19 @@ function slugify(name: string, number: string, uf: string): string {
   );
 }
 
+function birthYearFrom(birthDate: string | null): number | null {
+  return birthDate ? Number(birthDate.split("/").pop()) || null : null;
+}
+
 /**
  * syncCandidates() — fluxo completo do briefing "SINCRONIZAÇÃO DE
  * CANDIDATOS": metadata → checksum → parse → valida → RAW → normaliza →
  * upsert → SyncResult → invalida cache. Idempotente: arquivo idêntico não é
  * reprocessado.
+ *
+ * Vice-presidente/vice-governador (DS_CARGO="VICE-PRESIDENTE"/"VICE-GOVERNADOR")
+ * nunca viram Candidate — são coletados à parte e casados com o titular no
+ * final, por SQ_COLIGACAO (mesma chapa) + UF + cargo. Ver RunningMate no schema.
  */
 export async function syncCandidates(electionYear: number, localFilePath?: string): Promise<SyncResult> {
   const startedAt = new Date();
@@ -86,7 +94,9 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
   const officeCache = new Map<string, { id: string }>();
   const stateCache = new Map<string, { id: string }>();
   const partyCache = new Map<number, { id: string }>();
+  const coalitionCache = new Map<string, { id: string }>();
   const round1 = await prisma.electionRound.findFirst({ where: { round: 1, election: { year: electionYear } } });
+  const pendingRunningMates: RawRunningMateRecord[] = [];
 
   for (const row of downloaded.rows) {
     const parsed = TseCandidateRowSchema.safeParse(row);
@@ -96,8 +106,13 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
       continue;
     }
 
+    if (isViceOfficeRow(parsed.data.DS_CARGO)) {
+      pendingRunningMates.push(mapRunningMateRow(parsed.data));
+      continue; // não é erro — só não vira Candidate, ver nota da função
+    }
+
     const mapped = mapCandidateRow(parsed.data, downloaded.sourceUrl);
-    if (!mapped) continue; // cargo fora do escopo (prefeito/vereador etc.) — não é erro
+    if (!mapped) continue; // cargo fora do escopo (suplente, prefeito/vereador etc.) — não é erro
 
     try {
       const raw = await prisma.tseCandidateRaw.create({
@@ -141,9 +156,24 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
         partyCache.set(mapped.partyNumber, party);
       }
 
+      // toda candidatura tem SQ_COLIGACAO, mesmo "partido isolado" — usado também
+      // pra casar vice-presidente/vice-governador com o titular depois do loop.
+      let coalition: { id: string } | null = null;
+      if (mapped.coalitionSqId) {
+        coalition = coalitionCache.get(mapped.coalitionSqId) ?? null;
+        if (!coalition) {
+          coalition = await prisma.coalition.upsert({
+            where: { tseId: mapped.coalitionSqId },
+            update: { name: mapped.coalition ?? mapped.coalitionSqId, composition: mapped.coalitionComposition },
+            create: { tseId: mapped.coalitionSqId, name: mapped.coalition ?? mapped.coalitionSqId, composition: mapped.coalitionComposition },
+          });
+          coalitionCache.set(mapped.coalitionSqId, coalition);
+        }
+      }
+
       if (!round1) throw new Error(`ElectionRound não seedado para o ano ${electionYear}`);
 
-      const birthYear = mapped.birthDate ? Number(mapped.birthDate.split("/").pop()) || null : null;
+      const birthYear = birthYearFrom(mapped.birthDate);
 
       const existing = await prisma.candidate.findUnique({ where: { tseCandidateId: mapped.tseCandidateId } });
       await prisma.candidate.upsert({
@@ -155,8 +185,14 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
           occupation: mapped.occupation,
           educationLevel: mapped.education,
           birthYear,
+          birthDateRaw: mapped.birthDate,
           placeOfBirth: mapped.birthplace,
           nationality: mapped.nationality,
+          cpf: mapped.cpf,
+          gender: mapped.gender,
+          maritalStatus: mapped.maritalStatus,
+          raceColor: mapped.raceColor,
+          coalitionId: coalition?.id,
           rawDataId: raw.id,
           sourceUpdatedAt: new Date(),
         },
@@ -166,6 +202,7 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
           stateId: state.id,
           officeId: office.id,
           partyId: party.id,
+          coalitionId: coalition?.id,
           ballotName: mapped.ballotName,
           fullName: mapped.fullName,
           ballotNumber: mapped.ballotNumber,
@@ -174,8 +211,13 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
           occupation: mapped.occupation,
           educationLevel: mapped.education,
           birthYear,
+          birthDateRaw: mapped.birthDate,
           placeOfBirth: mapped.birthplace,
           nationality: mapped.nationality,
+          cpf: mapped.cpf,
+          gender: mapped.gender,
+          maritalStatus: mapped.maritalStatus,
+          raceColor: mapped.raceColor,
           isMockData: false,
           rawDataId: raw.id,
           sourceUpdatedAt: new Date(),
@@ -192,6 +234,61 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
         context: { tseCandidateId: mapped.tseCandidateId },
       });
     }
+  }
+
+  // Casa cada vice com o titular da mesma chapa (UF + cargo + SQ_COLIGACAO) —
+  // feito depois do loop principal porque o vice pode aparecer no CSV antes
+  // ou depois do titular, em qualquer ordem.
+  let runningMatesLinked = 0;
+  for (const vice of pendingRunningMates) {
+    if (!vice.coalitionSqId) continue;
+    const officeSlug = vice.isPresidentialTicket ? "presidente" : "governador";
+    const titular = await prisma.candidate.findFirst({
+      where: { state: { uf: vice.uf }, office: { slug: officeSlug }, coalition: { tseId: vice.coalitionSqId } },
+      select: { id: true },
+    });
+    if (!titular) continue; // titular fora do escopo do dataset processado — não é erro
+
+    const birthYear = birthYearFrom(vice.birthDate);
+    await prisma.runningMate.upsert({
+      where: { candidateId: titular.id },
+      update: {
+        tseCandidateId: vice.tseCandidateId,
+        ballotName: vice.ballotName,
+        fullName: vice.fullName,
+        ballotNumber: vice.ballotNumber,
+        partyAcronym: vice.partyAbbreviation,
+        partyName: vice.partyName,
+        occupation: vice.occupation,
+        educationLevel: vice.education,
+        birthYear,
+        birthDateRaw: vice.birthDate,
+        placeOfBirth: vice.birthplace,
+        cpf: vice.cpf,
+        gender: vice.gender,
+        maritalStatus: vice.maritalStatus,
+        raceColor: vice.raceColor,
+      },
+      create: {
+        candidateId: titular.id,
+        tseCandidateId: vice.tseCandidateId,
+        ballotName: vice.ballotName,
+        fullName: vice.fullName,
+        ballotNumber: vice.ballotNumber,
+        partyAcronym: vice.partyAbbreviation,
+        partyName: vice.partyName,
+        occupation: vice.occupation,
+        educationLevel: vice.education,
+        birthYear,
+        birthDateRaw: vice.birthDate,
+        placeOfBirth: vice.birthplace,
+        cpf: vice.cpf,
+        gender: vice.gender,
+        maritalStatus: vice.maritalStatus,
+        raceColor: vice.raceColor,
+      },
+    });
+    runningMatesLinked++;
   }
 
   await prisma.tseImportFile.update({ where: { id: importFile.id }, data: { status: "PROCESSED" } });
@@ -225,6 +322,7 @@ export async function syncCandidates(electionYear: number, localFilePath?: strin
     created: recordsCreated,
     updated: recordsUpdated,
     rejected: recordsRejected,
+    runningMatesLinked,
   });
 
   return {

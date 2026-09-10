@@ -24,15 +24,24 @@ function detectDelimiter(headerLine: string): string {
   return best;
 }
 
-function splitCsvLine(line: string, delimiter: string): string[] {
-  const cells: string[] = [];
+/**
+ * Tokeniza o texto inteiro em linhas de células, respeitando aspas — inclui
+ * quebra de linha DENTRO de um campo entre aspas (CSV válido, e o TSE usa
+ * isso em alguns campos de descrição de bens). Nunca quebrar por `\n`
+ * primeiro e só depois olhar aspas: isso corrompe qualquer linha cujo campo
+ * tenha uma quebra embutida (achado real ao importar `bem_candidato_2026`).
+ */
+function tokenizeCsv(text: string, delimiter: string): string[][] {
+  const rows: string[][] = [];
+  let cells: string[] = [];
   let current = "";
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
     if (inQuotes) {
       if (char === '"') {
-        if (line[i + 1] === '"') {
+        if (text[i + 1] === '"') {
           current += '"';
           i++;
         } else {
@@ -41,17 +50,28 @@ function splitCsvLine(line: string, delimiter: string): string[] {
       } else {
         current += char;
       }
-    } else if (char === '"') {
+      continue;
+    }
+
+    if (char === '"') {
       inQuotes = true;
     } else if (char === delimiter) {
       cells.push(current);
       current = "";
+    } else if (char === "\r" || char === "\n") {
+      if (char === "\r" && text[i + 1] === "\n") i++;
+      cells.push(current);
+      current = "";
+      if (cells.length > 1 || cells[0] !== "") rows.push(cells); // pula linha em branco
+      cells = [];
     } else {
       current += char;
     }
   }
   cells.push(current);
-  return cells;
+  if (cells.length > 1 || cells[0] !== "") rows.push(cells);
+
+  return rows;
 }
 
 export interface ParseCsvOptions {
@@ -64,14 +84,16 @@ export function decodeCsvBuffer(buffer: ArrayBuffer, encoding: ParseCsvOptions["
 }
 
 export function parseCsv(text: string): CsvRow[] {
-  const lines = text.split(/\r\n|\r|\n/).filter((l) => l.length > 0);
-  if (lines.length === 0) return [];
+  const firstLineEnd = text.search(/\r\n|\r|\n/);
+  const headerLineRaw = firstLineEnd === -1 ? text : text.slice(0, firstLineEnd);
+  const delimiter = detectDelimiter(headerLineRaw);
 
-  const delimiter = detectDelimiter(lines[0]);
-  const headers = splitCsvLine(lines[0], delimiter).map((h) => h.trim());
+  const rows = tokenizeCsv(text, delimiter);
+  if (rows.length === 0) return [];
 
-  return lines.slice(1).map((line) => {
-    const cells = splitCsvLine(line, delimiter);
+  const headers = rows[0].map((h) => h.trim());
+
+  return rows.slice(1).map((cells) => {
     const row: CsvRow = {};
     headers.forEach((h, i) => {
       row[h] = (cells[i] ?? "").trim();

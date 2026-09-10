@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MapPin, X } from "lucide-react";
 import { reverseGeocodeToUF } from "@/lib/geo/reverse-geocode";
-import { getSavedUF, saveUF, wasGeoAsked, markGeoAsked, clearUF } from "@/lib/quiz/storage";
+import { getSavedUF, saveUF, wasGeoAsked, markGeoAsked, clearUF } from "@/lib/local-storage/storage";
 import { getState, STATES } from "@/lib/domain/states";
+import { Select } from "@/components/ui/select";
 
 type Phase = "idle" | "detected" | "picking";
 
@@ -77,7 +78,7 @@ export function LocationDetector() {
       {phase === "picking" && (
         <div className="text-sm">
           <p className="mb-2 font-medium">Em qual estado você vota?</p>
-          <select
+          <Select
             autoFocus
             defaultValue=""
             onChange={(e) => {
@@ -89,7 +90,7 @@ export function LocationDetector() {
               }
               setPhase("idle");
             }}
-            className="w-full rounded-xl border border-border-strong bg-bg px-3 py-2.5"
+            className="bg-bg"
           >
             <option value="" disabled>
               Selecione…
@@ -99,7 +100,7 @@ export function LocationDetector() {
                 {s.name} ({s.uf})
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
     </div>
